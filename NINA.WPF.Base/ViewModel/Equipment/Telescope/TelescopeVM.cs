@@ -1,7 +1,7 @@
 #region "copyright"
 
 /*
-    Copyright � 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright   2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -144,7 +144,7 @@ namespace NINA.WPF.Base.ViewModel.Equipment.Telescope {
                         if (!Telescope.AtPark) {
                             progress?.Report(new ApplicationStatus { Status = Loc.Instance["LblWaitingForTelescopeToPark"] });
                             await Telescope.Park(timeoutCts.Token);
-                            
+
                             await updateTimer.WaitForNextUpdate(timeoutCts.Token);
                         } else {
                             Logger.Info("Mount commanded to park but it is already parked");
@@ -306,7 +306,7 @@ namespace NINA.WPF.Base.ViewModel.Equipment.Telescope {
                                 try {
                                     progress?.Report(new ApplicationStatus { Status = Loc.Instance["LblWaitingForTelescopeToFindHome"] });
                                     await Telescope.FindHome(timeoutCts.Token);
-                                                                        
+
                                     await updateTimer.WaitForNextUpdate(timeoutCts.Token);
                                     // We are home
                                     success = true;
@@ -333,8 +333,9 @@ namespace NINA.WPF.Base.ViewModel.Equipment.Telescope {
                                 reason = "it is parked";
                             }
                         } else {
-                            Logger.Info("Mount ordered to home but it is already at home");
-                            success = true;
+                            // AtHome == true
+                            Notification.ShowWarning(Loc.Instance["LblTelescopeAtHomeWarn"]);
+                            reason = "it is already at the home position";
                         }
                     } else {
                         // CanFindHome == false
@@ -541,7 +542,7 @@ namespace NINA.WPF.Base.ViewModel.Equipment.Telescope {
                         }
                     } catch (OperationCanceledException ex) {
                         if (telescope?.Connected == true) {
-                            await Disconnect(); 
+                            await Disconnect();
                         }
                         Notification.ShowError(ex.Message);
                         return false;
@@ -763,21 +764,29 @@ namespace NINA.WPF.Base.ViewModel.Equipment.Telescope {
 
         public async Task<bool> Sync(Coordinates coordinates) {
             try {
-                var transform = coordinates.Transform(TelescopeInfo.EquatorialSystem);
+                Logger.Debug($"Starting sync to coordinates {coordinates.Transform(Epoch.JNOW)}");
                 if (!profileService.ActiveProfile.TelescopeSettings.NoSync && TelescopeInfo.Connected) {
                     progress.Report(new ApplicationStatus() { Status = Loc.Instance["LblSync"] });
+                    var transform = coordinates.Transform(TelescopeInfo.EquatorialSystem);
 
                     if (transform.RA < 0) {
                         var mod24Ra = AstroUtil.EuclidianModulus(transform.RA, 24);
                         Logger.Info($"RA value {transform.RA} is less than zero: applying Euclidean % 24 to RA for sync.");
                         transform.RA = mod24Ra;
                     }
+
                     var position = GetCurrentPosition();
+                    Separation initialDelta = transform - position;
                     bool result = Telescope.Sync(transform);
-                    Logger.Info($"{(result ? string.Empty : "FAILED - ")}Syncing scope from {position} to {transform}");
-                    var waitForUpdate = updateTimer.WaitForNextUpdate(default);
-                    await Task.Delay(TimeSpan.FromSeconds(Math.Max(2, profileService.ActiveProfile.TelescopeSettings.SettleTime)));
-                    await waitForUpdate;
+                    if (!result) {
+                        Logger.Info($"FAILED - Syncing scope from {position} to {transform}");
+                        return false;
+                    }
+
+                    Logger.Info($"Syncing scope from {position} to {transform}");
+                    Logger.Debug($"Initial delta between current position {position} and sync target {transform} is {initialDelta}");
+                    await WaitForSyncCompletion(transform, initialDelta);
+
                     return result;
                 } else {
                     return false;
@@ -785,6 +794,32 @@ namespace NINA.WPF.Base.ViewModel.Equipment.Telescope {
             } finally {
                 progress.Report(new ApplicationStatus() { Status = string.Empty });
             }
+        }
+
+        private async Task WaitForSyncCompletion(Coordinates transform, Separation initialError) {
+            DateTime currentTime = DateTime.UtcNow;
+            DateTime timeoutEnds = currentTime + TimeSpan.FromSeconds(profileService.ActiveProfile.TelescopeSettings.SettleTime);
+            double plateSolveTolerance = profileService.ActiveProfile.PlateSolveSettings.Threshold;
+            Angle plateSolveToleranceAngle = Angle.ByDegree(plateSolveTolerance);
+            await updateTimer.WaitForNextUpdate(default);
+            Coordinates position = GetCurrentPosition();
+            while (
+                    timeoutEnds < currentTime &&
+                    (position - transform).Distance.Degree > plateSolveTolerance
+                  ) {
+                Logger.Debug($"Waiting for telescope to update its position after sync command. " +
+                    $"Current position: {position}, Target position: {transform}, " +
+                    $"Current error: {(position - transform).Distance}, " +
+                    $"Initial error: {initialError.Distance}, " +
+                    $"Platesolve tolerance: {plateSolveToleranceAngle}");
+                await updateTimer.WaitForNextUpdate(default);
+                position = GetCurrentPosition();
+                currentTime = DateTime.UtcNow;
+            }
+            if (currentTime >= timeoutEnds) {
+                Logger.Debug($"Timed out waiting for telescope to update its position to {transform} after a sync command");
+            }
+
         }
 
         [RelayCommand]
@@ -1032,22 +1067,22 @@ namespace NINA.WPF.Base.ViewModel.Equipment.Telescope {
         }
 
         public bool SetTrackingMode(TrackingMode trackingMode) {
-            if(TelescopeInfo?.Connected != true) {
+            if (TelescopeInfo?.Connected != true) {
                 Logger.Warning("Cannot set tracking mode as the mount is not connected");
                 return false;
             }
 
-            if(TelescopeInfo.AtPark) {
+            if (TelescopeInfo.AtPark) {
                 Logger.Warning("Cannot set tracking mode as the mount is parked");
                 return false;
             }
 
-            if(trackingMode == TrackingMode.Custom) {
+            if (trackingMode == TrackingMode.Custom) {
                 Logger.Warning("Cannot set tracking mode as the tracking rate is custom");
                 return false;
             }
 
-            
+
             Telescope.TrackingMode = trackingMode;
             if (trackingMode != TrackingMode.Stopped && (Telescope.CanSetDeclinationRate || Telescope.CanSetRightAscensionRate)) {
                 try {
