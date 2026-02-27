@@ -1,7 +1,7 @@
 #region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -15,6 +15,7 @@
 using NINA.Core.Database.Schema;
 using NINA.Core.Utility;
 using System;
+using System.Data;
 using System.Data.Entity;
 using System.Data.Entity.Core.Common;
 using System.Data.Entity.ModelConfiguration.Conventions;
@@ -41,6 +42,7 @@ namespace NINA.Core.Database {
         public IDbSet<ConstellationBoundaries> ConstellationBoundariesSet { get; set; }
         public IDbSet<VisualDescription> VisualDescriptionSet { get; set; }
         public IDbSet<CatalogueNr> CatalogueNrSet { get; set; }
+        public IDbSet<HipsSkyMaps> HipsSkyMapSet { get; set; }
 
         public NINADbContext(string connectionString) : base(new SQLiteConnection() { ConnectionString = connectionString }, true) {
             DbConfiguration.SetConfiguration(new SQLiteConfiguration());
@@ -62,68 +64,95 @@ namespace NINA.Core.Database {
             System.Data.Entity.Database.SetInitializer(sqi);
         }
 
-        private class CreateOrMigrateDatabaseInitializer<TContext> : CreateDatabaseIfNotExists<TContext>, IDatabaseInitializer<TContext> where TContext : DbContext {
-
+        private class CreateOrMigrateDatabaseInitializer<TContext>
+    : CreateDatabaseIfNotExists<TContext>, IDatabaseInitializer<TContext>
+    where TContext : DbContext {
             void IDatabaseInitializer<TContext>.InitializeDatabase(TContext context) {
-                Migrate(context);
+                // Make sure we keep the same connection for PRAGMA + migrations
+                var conn = context.Database.Connection;
+                var wasOpen = conn.State == ConnectionState.Open;
+                if (!wasOpen)
+                    conn.Open();
 
-                context.Database.SqlQuery<int>("PRAGMA foreign_keys = ON");
+                try {
+                    // Turn FKs off for the whole migration
+                    context.Database.ExecuteSqlCommand(
+                        TransactionalBehavior.DoNotEnsureTransaction,
+                        "PRAGMA foreign_keys = OFF;"
+                    );
+
+                    Migrate(context);
+
+                    // Re-enable FKs after migration
+                    context.Database.ExecuteSqlCommand(
+                        TransactionalBehavior.DoNotEnsureTransaction,
+                        "PRAGMA foreign_keys = ON;"
+                    );
+                } finally {
+                    if (!wasOpen)
+                        conn.Close();
+                }
             }
 
             private void Migrate(DbContext context) {
                 int version = context.Database.SqlQuery<int>("PRAGMA user_version").First();
                 bool vacuum = false;
-                context.Database.SqlQuery<int>("PRAGMA foreign_keys = OFF");
 
-                int numTables = context.Database.SqlQuery<int>("SELECT COUNT(*) FROM sqlite_master AS TABLES WHERE TYPE = 'table'").First();
+                int numTables = context.Database
+                    .SqlQuery<int>("SELECT COUNT(*) FROM sqlite_master AS TABLES WHERE TYPE = 'table'")
+                    .First();
 
                 var initial = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", "Initial");
 
                 if (numTables == 0) {
                     try {
                         vacuum = true;
-                        context.Database.BeginTransaction();
 
-                        var initial_schema = Path.Combine(initial, "initial_schema.sql");
-                        context.Database.ExecuteSqlCommand(File.ReadAllText(initial_schema));
+                        using (var tx = context.Database.BeginTransaction()) {
+                            var initial_schema = Path.Combine(initial, "initial_schema.sql");
+                            context.Database.ExecuteSqlCommand(File.ReadAllText(initial_schema));
 
-                        var initial_data = Path.Combine(initial, "initial_data.sql");
-                        context.Database.ExecuteSqlCommand(File.ReadAllText(initial_data));
+                            var initial_data = Path.Combine(initial, "initial_data.sql");
+                            context.Database.ExecuteSqlCommand(File.ReadAllText(initial_data));
 
-                        context.Database.CurrentTransaction.Commit();
+                            tx.Commit();
+                        }
                     } catch (Exception ex) {
-                        context.Database.CurrentTransaction.Rollback();
                         Logger.Error(ex);
                     }
                 }
 
                 var migration = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", "Migration");
+                var files = Directory.GetFiles(migration, "*.sql")
+                                     .OrderBy(x => int.Parse(Path.GetFileNameWithoutExtension(x)));
 
-                var files = Directory.GetFiles(migration, "*.sql").OrderBy(x => int.Parse(Path.GetFileNameWithoutExtension(x)));
                 foreach (var migrationFile in files) {
-                    if (!int.TryParse(Path.GetFileName(migrationFile).Split('.').First(), out int sqlVersion)) {
+                    if (!int.TryParse(Path.GetFileName(migrationFile).Split('.').First(), out int sqlVersion))
                         continue;
-                    }
 
-                    if (sqlVersion <= version) {
+                    if (sqlVersion <= version)
                         continue;
-                    }
 
                     try {
                         var migrationScript = File.ReadAllText(migrationFile);
-                        context.Database.BeginTransaction();
-                        context.Database.ExecuteSqlCommand(migrationScript);
-                        context.Database.CurrentTransaction.Commit();
+
+                        using (var tx = context.Database.BeginTransaction()) {
+                            context.Database.ExecuteSqlCommand(migrationScript);
+                            tx.Commit();
+                        }
+
                         vacuum = true;
                     } catch (Exception ex) {
-                        context.Database.CurrentTransaction.Rollback();
                         Logger.Error(ex);
                     }
                 }
 
                 try {
                     if (vacuum) {
-                        context.Database.ExecuteSqlCommand(TransactionalBehavior.DoNotEnsureTransaction, "VACUUM;");
+                        context.Database.ExecuteSqlCommand(
+                            TransactionalBehavior.DoNotEnsureTransaction,
+                            "VACUUM;"
+                        );
                     }
                 } catch (Exception ex) {
                     Logger.Error(ex);

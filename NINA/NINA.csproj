@@ -100,7 +100,13 @@
     <None Remove="External\x64\Cfitsio\cfitsionative.dll" />
     <None Remove="External\x64\Cfitsio\pthreadVC2.dll" />
     <None Remove="External\x64\Cfitsio\zlib.dll" />
+    <None Remove="External\x64\Moravian\cXusb.dll" />
+    <None Remove="External\x64\Moravian\gXeth.dll" />
+    <None Remove="External\x64\Moravian\gXusb.dll" />
+    <None Remove="External\x64\Moravian\sfw.dll" />
+    <None Remove="External\x64\Moravian\sfweth.dll" />
     <None Remove="External\x64\PlayerOne\PlayerOnePW.dll" />
+    <None Remove="External\x64\SOFA\SOFA_2023_10_11.dll" />
     <None Remove="External\x64\SVBony\svbonycam.dll" />
   </ItemGroup>
   <ItemGroup>
@@ -157,6 +163,21 @@
     <Content Include="External\x64\Cfitsio\zlib.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="External\x64\Moravian\cXusb.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="External\x64\Moravian\gXeth.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="External\x64\Moravian\gXusb.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="External\x64\Moravian\sfw.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="External\x64\Moravian\sfweth.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="External\x64\PlayerOne\PlayerOnePW.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -173,6 +194,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="External\x64\SBIG\SBIGUDrv.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="External\x64\SOFA\SOFA_2023_10_11.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="External\x64\SVBony\svbonycam.dll">
@@ -290,10 +314,13 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <TargetPath>qhyccd.ini</TargetPath>
     </ContentWithTargetPath>
-    <Content Include="External\x64\SOFA\SOFAlib.dll">
+    <Content Include="External\x64\ToupTek\toupcam.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="External\x64\ToupTek\toupcam.dll">
+    <Content Include="External\x64\Oasis\OasisFocuser.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="External\x64\Oasis\OasisFilterWheel.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Resource Include="Logo_Nina.ico" />
@@ -385,18 +412,14 @@
     <PackageReference Include="CommandLineParser" Version="2.9.1" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Dirkster.AvalonDock" Version="4.72.1" />
-    <PackageReference Include="DotNetProjects.Extended.Wpf.Toolkit" Version="5.0.124" />
+    <PackageReference Include="DotNetProjects.Extended.Wpf.Toolkit" Version="5.0.129" />
     <PackageReference Include="MdXaml" Version="1.27.0" />
-    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
     <PackageReference Include="OxyPlot.Contrib" Version="2.1.2" />
     <PackageReference Include="OxyPlot.Contrib.Wpf" Version="2.1.2" />
     <PackageReference Include="OxyPlot.Wpf" Version="2.2.0" />
+    <PackageReference Include="Parlot" Version="1.3.3" />
     <PackageReference Include="System.Data.SqlClient" Version="4.9.0" />
-    <PackageReference Include="System.Net.Http" Version="4.3.4" />
-    <PackageReference Include="System.Private.Uri" Version="4.3.2" />
-    <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
-    <PackageReference Include="ToastNotifications.Messages" Version="2.5.1" />
   </ItemGroup>
   <ItemGroup>
     <Page Remove="Resources\Camera.xaml" />
@@ -423,6 +446,12 @@
     <None Update="Database\Migration\14.sql">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+   <None Update="Database\Migration\15.sql">
+	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</None>
+   <None Update="Database\Migration\16.sql">
+     <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+   </None>
     <None Update="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -432,7 +461,7 @@
     <RuntimeHostConfigurationOption Include="Switch.System.Windows.Media.EnableHardwareAccelerationInRdp" Value="true" />
   </ItemGroup>
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='SignedRelease|AnyCPU'">

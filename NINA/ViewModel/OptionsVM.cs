@@ -1,7 +1,7 @@
 #region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -135,6 +135,13 @@ namespace NINA.ViewModel {
             customPatterns.Add(pattern);
             RecreatePatterns();
         }
+        public void RemoveImagePattern(string key) {
+            var pattern = customPatterns.FirstOrDefault(p => p.Key == key);
+            if (pattern != null) {
+                customPatterns.Remove(pattern);
+                RecreatePatterns();
+            }
+        }
 
         private void RecreatePatterns() {
             var patterns = ImagePatterns.CreateExample();
@@ -180,6 +187,22 @@ namespace NINA.ViewModel {
                 profileService.ActiveProfile.ImageFileSettings.FilePatternBIAS = value;
                 RaisePropertyChanged();
                 RaisePropertyChanged(nameof(FilePatternPreviewBIAS));
+            }
+        }
+
+        public NotificationCorner NotificationCorner {
+            get => profileService.ActiveProfile.ApplicationSettings.NotificationCorner;
+            set {
+                profileService.ActiveProfile.ApplicationSettings.NotificationCorner = value;
+                Notification.ConfigurePosition(NotificationWorkArea, NotificationCorner);
+            }
+        }
+
+        public NotificationWorkArea NotificationWorkArea {
+            get => profileService.ActiveProfile.ApplicationSettings.NotificationWorkArea;
+            set {
+                profileService.ActiveProfile.ApplicationSettings.NotificationWorkArea = value;
+                Notification.ConfigurePosition(NotificationWorkArea, NotificationCorner);
             }
         }
 

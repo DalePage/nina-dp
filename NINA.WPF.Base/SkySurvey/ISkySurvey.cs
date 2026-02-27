@@ -1,7 +1,7 @@
 #region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -24,6 +24,13 @@ namespace NINA.WPF.Base.SkySurvey {
 
         Task<SkySurveyImage> GetImage(string name, Coordinates coordinates, double fieldOfView, int width, int height,
             CancellationToken ct, IProgress<int> progress);
+
+        Task<SkySurveyImage> GetImage(string name, string hipsSkyMapPath, Coordinates coordinates, double fieldOfView, int width, int height,
+            CancellationToken ct, IProgress<int> progress) {
+
+            return GetImage(name, coordinates: coordinates, fieldOfView: fieldOfView, width: width, height: height, ct: ct, progress: progress);
+        }
+
     }
 
     public class SkySurveyImage {

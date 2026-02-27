@@ -1,5 +1,5 @@
 ﻿<Project>
-  <Import Project="Sdk.props" Sdk="WixToolset.Sdk" Version="4.0.2" />
+  <Import Project="Sdk.props" Sdk="WixToolset.Sdk" Version="6.0.2" />
   <PropertyGroup>
     <OutputName>NINASetup</OutputName>
     <Name>NINA.Setup</Name>
@@ -161,10 +161,10 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="WixToolset.Heat" Version="4.0.6" />
-    <PackageReference Include="WixToolset.Netfx.wixext" Version="4.0.6" />
-    <PackageReference Include="WixToolset.Util.wixext" Version="4.0.6" />
-    <PackageReference Include="WixToolset.UI.wixext" Version="4.0.6" />
+    <PackageReference Include="WixToolset.Heat" Version="6.0.2" />
+    <PackageReference Include="WixToolset.Netfx.wixext" Version="6.0.2" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="6.0.2" />
+    <PackageReference Include="WixToolset.UI.wixext" Version="6.0.2" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Images" />
@@ -175,7 +175,7 @@
   <Target Name="SignMsi">
     <Exec Command="signtool.exe sign /t http://timestamp.sectigo.com /i Sectigo /v /a /fd SHA256 &quot;%(SignMsi.FullPath)&quot;" />
   </Target>-->
-  <Import Project="Sdk.targets" Sdk="WixToolset.Sdk" Version="4.0.2" />
+  <Import Project="Sdk.targets" Sdk="WixToolset.Sdk" Version="6.0.2" />
   <PropertyGroup>
     <PostBuildEvent>
     </PostBuildEvent>
@@ -186,14 +186,14 @@
     <HarvestFileSuppressUniqueIds>true</HarvestFileSuppressUniqueIds>
   </PropertyGroup>
   <ItemGroup>
-    <HarvestDirectory Include="..\NINA\bin\$(Configuration)\net8.0-windows\win-x64\docs">
+    <HarvestDirectory Include="..\NINA\bin\$(Configuration)\net10.0-windows\win-x64\docs">
       <ComponentGroupName>DocumentationComponent</ComponentGroupName>
       <DirectoryRefId>DocumentationDirectory</DirectoryRefId>
       <SuppressRootDirectory>true</SuppressRootDirectory>
       <SuppressRegistry>true</SuppressRegistry>
       <SuppressCom>true</SuppressCom>
     </HarvestDirectory>
-    <BindPath Include="..\NINA\bin\$(Configuration)\net8.0-windows\win-x64\docs" />
+    <BindPath Include="..\NINA\bin\$(Configuration)\net10.0-windows\win-x64\docs" />
   </ItemGroup>
   <!-- /Harvest Documentation  -->
 </Project>

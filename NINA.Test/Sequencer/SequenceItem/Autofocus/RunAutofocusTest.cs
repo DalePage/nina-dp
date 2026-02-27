@@ -1,7 +1,7 @@
 ﻿#region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -217,7 +217,7 @@ namespace NINA.Test.Sequencer.SequenceItem.Autofocus {
             windowFactoryMock.Setup(x => x.Create()).Returns(windowMock.Object);
 
             var autofocusMock = new Mock<IAutoFocusVM>();
-            autofocusMock.Setup(af => af.StartAutoFocus(It.IsAny<FilterInfo>(), It.IsAny<CancellationToken>(), It.IsAny<IProgress<ApplicationStatus>>())).Returns(Task.FromResult<AutoFocusReport>(null));
+            autofocusMock.Setup(af => af.StartAutoFocus(It.IsAny<FilterInfo>(), It.IsAny<CancellationToken>(), It.IsAny<IProgress<ApplicationStatus>>())).Returns(Task.FromResult<AutoFocusReport?>(null));
             autofocusVMFactoryMock.Setup(x => x.Create()).Returns(autofocusMock.Object);
 
             var filter = new FilterInfo() { Position = 0 };

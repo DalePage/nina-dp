@@ -1,5 +1,5 @@
 <!--
-    Copyright (c) 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright (c) 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -126,9 +126,13 @@
                             <Border
                                 Margin="0,5,0,0"
                                 BorderBrush="{StaticResource BorderBrush}"
-                                BorderThickness="0"
-                                IsEnabled="{Binding Focuser.TempCompAvailable, FallbackValue=False}"
-                                Visibility="{Binding ActiveProfile.DockPanelSettings.FocuserInfoOnly, Converter={StaticResource BooleanToVisibilityCollapsedConverter}}">
+                                BorderThickness="0">
+                                <Border.Visibility>
+                                    <MultiBinding Converter="{StaticResource BooleanToVisibilityCollapsedMultiConverter}">
+                                        <Binding Path="FocuserInfo.TempCompAvailable" />
+                                        <Binding Path="ActiveProfile.DockPanelSettings.FocuserInfoOnly" />
+                                    </MultiBinding>
+                                </Border.Visibility>
                                 <UniformGrid VerticalAlignment="Center" Columns="2">
                                     <TextBlock VerticalAlignment="Center" Text="{ns:Loc LblTempComp}" />
                                     <CheckBox
@@ -146,9 +150,11 @@
                                 Margin="0,5,0,0"
                                 BorderBrush="{StaticResource BorderBrush}"
                                 BorderThickness="0"
-                                IsEnabled="{Binding Focuser.TempCompAvailable, FallbackValue=False}"
                                 Visibility="{Binding ActiveProfile.DockPanelSettings.FocuserInfoOnly, Converter={StaticResource InverseBooleanToVisibilityCollapsedConverter}}">
-                                <UniformGrid VerticalAlignment="Center" Columns="2">
+                                <UniformGrid
+                                    VerticalAlignment="Center"
+                                    Columns="2"
+                                    Visibility="{Binding FocuserInfo.TempCompAvailable, Converter={StaticResource BooleanToVisibilityCollapsedConverter}}">
                                     <TextBlock VerticalAlignment="Center" Text="{ns:Loc LblTempComp}" />
                                     <CheckBox
                                         Height="25"

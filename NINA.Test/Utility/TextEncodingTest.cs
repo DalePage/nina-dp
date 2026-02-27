@@ -1,7 +1,7 @@
 ﻿#region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -29,14 +29,14 @@ namespace NINA.Test.Utility {
         [Test]
         public void UnicodeToAsciiNullTest() {
             // Arrange
-            string unicode = null;
+            string? unicode = null;
             string ascii = "";
 
             // Act
             string result = TextEncoding.UnicodeToAscii(unicode);
 
             // Assert
-            ClassicAssert.AreEqual(ascii, result);
+            Assert.That(result, Is.EqualTo(ascii));
         }
 
         [Test]
@@ -49,7 +49,7 @@ namespace NINA.Test.Utility {
             string result = TextEncoding.UnicodeToAscii(unicode);
 
             // Assert
-            ClassicAssert.AreEqual(ascii, result);
+            Assert.That(result, Is.EqualTo(ascii));
         }
 
         [Test]
@@ -62,20 +62,20 @@ namespace NINA.Test.Utility {
             string result = TextEncoding.UnicodeToAscii(unicode);
 
             // Assert
-            ClassicAssert.AreEqual(ascii, result);
+            Assert.That(result, Is.EqualTo(ascii));
         }
 
         [Test]
         public void GreekToLatinAbbreviationNullTest() {
             // Arrange
-            string hasGreek = null;
+            string? hasGreek = null;
             string inLatin = "";
 
             // Act
             string result = TextEncoding.GreekToLatinAbbreviation(hasGreek);
 
             // Assert
-            ClassicAssert.AreEqual(inLatin, result);
+            Assert.That(result, Is.EqualTo(inLatin));
         }
 
         [Test]
@@ -88,7 +88,7 @@ namespace NINA.Test.Utility {
             string result = TextEncoding.GreekToLatinAbbreviation(hasGreek);
 
             // Assert
-            ClassicAssert.AreEqual(inLatin, result);
+            Assert.That(result, Is.EqualTo(inLatin));
         }
 
         [Test]
@@ -101,7 +101,7 @@ namespace NINA.Test.Utility {
             string result = TextEncoding.GreekToLatinAbbreviation(hasGreek);
 
             // Assert
-            ClassicAssert.AreEqual(inLatin, result);
+            Assert.That(result, Is.EqualTo(inLatin));
         }
 
         [Test]
@@ -114,7 +114,7 @@ namespace NINA.Test.Utility {
             string result = TextEncoding.GreekToLatinAbbreviation(hasOnylLatin);
 
             // Assert
-            ClassicAssert.AreEqual(inLatin, result);
+            Assert.That(result, Is.EqualTo(inLatin));
         }
     }
 }

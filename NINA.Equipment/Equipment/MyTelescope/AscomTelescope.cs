@@ -1,7 +1,7 @@
 #region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -319,9 +319,11 @@ namespace NINA.Equipment.Equipment.MyTelescope {
                     TrackingEnabled = true;
                 }
 
+                // Add some padding to the current side of pier projection in case the meridian flip settings are very close to meridian
+                var projectedSiderealTime = Angle.ByHours(AstroUtil.EuclidianModulus(SiderealTime + 0.2, 24));
                 var targetSideOfPier = NINA.Astrometry.MeridianFlip.ExpectedPierSide(
                     coordinates: targetCoordinates,
-                    localSiderealTime: Angle.ByHours(SiderealTime));
+                    localSiderealTime: projectedSiderealTime);
                 if (profileService.ActiveProfile.MeridianFlipSettings.UseSideOfPier) {
                     var sop = SideOfPier;
                     Logger.Info($"Mount side of pier is currently {sop}, and target is {targetSideOfPier}");

@@ -1,7 +1,7 @@
 ﻿#region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -34,16 +34,18 @@ namespace NINA.Test.Sequencer.Trigger.Guider {
     [TestFixture]
     public class RestoreGuidingTest {
         private Mock<IGuiderMediator> guiderMediatorMock;
+        private Mock<ISafetyMonitorMediator> safetyMonitorMediatorMock;
 
         [SetUp]
         public void Setup() {
             guiderMediatorMock = new Mock<IGuiderMediator>();
+            safetyMonitorMediatorMock= new Mock<ISafetyMonitorMediator>();
             guiderMediatorMock.Setup(x => x.GetInfo()).Returns(new GuiderInfo() { Connected = true });
         }
 
         [Test]
         public void CloneTest() {
-            var initial = new RestoreGuiding(guiderMediatorMock.Object);
+            var initial = new RestoreGuiding(guiderMediatorMock.Object, safetyMonitorMediatorMock.Object);
             initial.Icon = new System.Windows.Media.GeometryGroup();
 
             var sut = (RestoreGuiding)initial.Clone();
@@ -54,7 +56,7 @@ namespace NINA.Test.Sequencer.Trigger.Guider {
 
         [Test]
         public async Task ExecuteTest() {
-            var sut = new RestoreGuiding(guiderMediatorMock.Object);
+            var sut = new RestoreGuiding(guiderMediatorMock.Object, safetyMonitorMediatorMock.Object);
             await sut.Execute(default, default, default);
 
             guiderMediatorMock.Verify(x => x.StartGuiding(false, It.IsAny<IProgress<ApplicationStatus>>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -62,7 +64,7 @@ namespace NINA.Test.Sequencer.Trigger.Guider {
 
         [Test]
         public void InitializeTest() {
-            var sut = new RestoreGuiding(guiderMediatorMock.Object);
+            var sut = new RestoreGuiding(guiderMediatorMock.Object, safetyMonitorMediatorMock.Object);
             sut.SequenceBlockStarted();
 
             Assert.Pass();
@@ -70,7 +72,7 @@ namespace NINA.Test.Sequencer.Trigger.Guider {
 
         [Test]
         public void ShouldTrigger_NextItemLightExposure() {
-            var sut = new RestoreGuiding(guiderMediatorMock.Object);
+            var sut = new RestoreGuiding(guiderMediatorMock.Object, safetyMonitorMediatorMock.Object);
 
             var profileServiceMock = new Mock<IProfileService>();
             var cameraMediatorMock = new Mock<ICameraMediator>();

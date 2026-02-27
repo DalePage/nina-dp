@@ -1,7 +1,7 @@
 ﻿#region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -60,11 +60,13 @@ namespace NINA.Sequencer {
             get => mainContainer;
             set {
                 if(mainContainer != null && mainContainer != value){
+                    bool saveChangeStatus = mainContainer.HasChanges[SequenceEntityINPC.defaultChangeSet];
                     // when a new sequence is loaded, allow existing sequence elements to detect that
                     // they are no longer part of the sequence root container.
-                    foreach(var item in mainContainer.GetItemsSnapshot()){
+                    foreach (var item in mainContainer.GetItemsSnapshot()){
                         item.Detach();
                     }
+                    mainContainer.HasChanges[SequenceEntityINPC.defaultChangeSet] = saveChangeStatus;
                 }
                 mainContainer = value;
                 RaisePropertyChanged();

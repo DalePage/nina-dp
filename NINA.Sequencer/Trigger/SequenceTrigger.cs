@@ -1,7 +1,7 @@
 ﻿#region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -29,11 +29,12 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Media;
 using NINA.Sequencer.Utility;
+using NINA.Sequencer.Logic;
 
 namespace NINA.Sequencer.Trigger {
 
     [JsonObject(MemberSerialization.OptIn)]
-    public abstract class SequenceTrigger : SequenceHasChanged, ISequenceTrigger {
+    public abstract class SequenceTrigger : SequenceEntityINPC, ISequenceTrigger {
 
         public SequenceTrigger() {
             TriggerRunner = new SequentialContainer();
@@ -48,6 +49,7 @@ namespace NINA.Sequencer.Trigger {
             Name = cloneMe.Name;
             Category = cloneMe.Category;
             Description = cloneMe.Description;
+            SymbolBroker = cloneMe.SymbolBroker;
         }
 
         [OnDeserializing]
@@ -56,6 +58,9 @@ namespace NINA.Sequencer.Trigger {
             this.TriggerRunner?.Conditions.Clear();
             this.TriggerRunner?.Triggers.Clear();
         }
+
+
+        public ISymbolBroker SymbolBroker { get; set; }
 
         public string Name { get; set; }
 
@@ -199,6 +204,13 @@ namespace NINA.Sequencer.Trigger {
 
         public void MoveDown() {
             throw new NotImplementedException();
+        }
+        public bool HasChanged { get; set; }
+
+        public void ClearHasChanged() { }
+
+        public bool AskHasChanged(string name) {
+            return false;
         }
     }
 }

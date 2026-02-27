@@ -1,7 +1,7 @@
 ﻿#region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -28,21 +28,24 @@ namespace NINA.WPF.Base.SkySurvey {
     /// Description can be found at http://alasky.u-strasbg.fr/hips-image-services/hips2fits
     /// </summary>
     internal class Hips2FitsSurvey : ISkySurvey {
-        private const string AltUrl = "https://alasky.u-strasbg.fr/hips-image-services/hips2fits?projection=STG&hips=CDS%2FP%2FDSS2%2Fcolor&width={0}&height={1}&fov={2}&ra={3}&dec={4}&format=jpg";
-        private const string Url = "https://alaskybis.u-strasbg.fr/hips-image-services/hips2fits?projection=STG&hips=CDS%2FP%2FDSS2%2Fcolor&width={0}&height={1}&fov={2}&ra={3}&dec={4}&format=jpg";
 
-        public async Task<SkySurveyImage> GetImage(string name, Coordinates coordinates, double fieldOfView, int width,
-            int height, CancellationToken ct, IProgress<int> progress) {
+        private const string AltUrl = "https://alasky.u-strasbg.fr/hips-image-services/hips2fits?projection=STG&hips={0}&width={1}&height={2}&fov={3}&ra={4}&dec={5}&format=jpg";
+        private const string Url = "https://alaskybis.u-strasbg.fr/hips-image-services/hips2fits?projection=STG&hips={0}&width={1}&height={2}&fov={3}&ra={4}&dec={5}&format=jpg";
+        private const string DefaultSkyMapPath = "CDS/P/DSS2/color";
+
+        public async Task<SkySurveyImage> GetImage(string name, string hipsSkyMapPath, Coordinates coordinates, double fieldOfView, int width, int height,
+            CancellationToken ct, IProgress<int> progress) {
+
             fieldOfView = Math.Round(fieldOfView, 2);
 
             BitmapSource image;
             try {
-                image = await QueryImage(Url, coordinates, fieldOfView, ct, progress);
+                image = await QueryImage(Url, coordinates, fieldOfView, ct, progress, hipsSkyMapPath);
             } catch(OperationCanceledException) {
                 throw;
             } catch (Exception) {
                 try {
-                    image = await QueryImage(AltUrl, coordinates, fieldOfView, ct, progress);
+                    image = await QueryImage(AltUrl, coordinates, fieldOfView, ct, progress, hipsSkyMapPath);
                 } catch (OperationCanceledException) {
                     throw;
                 } catch (Exception ex) {
@@ -66,9 +69,10 @@ namespace NINA.WPF.Base.SkySurvey {
             };
         }
 
-        private async Task<BitmapSource> QueryImage(string url, Coordinates coordinates, double fieldOfView, CancellationToken ct, IProgress<int> progress) {
+        private async Task<BitmapSource> QueryImage(string url, Coordinates coordinates, double fieldOfView, CancellationToken ct, IProgress<int> progress, string hipsSkyMapPath = DefaultSkyMapPath) {
             var request = new HttpDownloadImageRequest(
                    url,
+                   Uri.EscapeDataString(hipsSkyMapPath),
                    2000,
                    2000,
                    AstroUtil.ArcminToDegree(fieldOfView),
@@ -89,5 +93,10 @@ namespace NINA.WPF.Base.SkySurvey {
 
             return BitmapSource.Create(width, height, dpi, dpi, bitmapImage.Format, null, pixelData, stride);
         }
+
+        public Task<SkySurveyImage> GetImage(string name, Coordinates coordinates, double fieldOfView, int width, int height, CancellationToken ct, IProgress<int> progress) {
+            throw new NotImplementedException();
+        }
     }
+
 }

@@ -1,7 +1,7 @@
 #region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -27,9 +27,6 @@ namespace NINA.Core.Utility.SerialCommunication {
 
         public SerialPortClosedException(string message, Exception innerException) : base(message, innerException) {
         }
-
-        protected SerialPortClosedException(System.Runtime.Serialization.SerializationInfo serializationInfo, System.Runtime.Serialization.StreamingContext streamingContext) : base(serializationInfo, streamingContext) {
-        }
     }
 
     [Serializable]
@@ -42,9 +39,6 @@ namespace NINA.Core.Utility.SerialCommunication {
         }
 
         public InvalidDeviceResponseException(string message, Exception innerException) : base(message, innerException) {
-        }
-
-        protected InvalidDeviceResponseException(System.Runtime.Serialization.SerializationInfo serializationInfo, System.Runtime.Serialization.StreamingContext streamingContext) : base(serializationInfo, streamingContext) {
         }
     }
 }

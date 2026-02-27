@@ -1,7 +1,7 @@
 #region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -82,12 +82,24 @@ namespace NINA.Profile {
         private void Initialize() {
             var index = ColorSchemas.Items.FindIndex(x => x.Name == ColorSchema.Name);
             if (index > -1) {
-                ColorSchemas.Items[index] = ColorSchema;
+                if (ColorSchema.Name == "Custom" || ColorSchema.Name == "Alternative Custom") {
+                    // Apply custom colors to the custom schema
+                    ColorSchemas.Items[index] = ColorSchema;
+                } else {
+                    // Ensure the reference is the same as in the collection to get the combobox populated
+                    ColorSchema = ColorSchemas.Items[index];
+                }
             }
 
             var index2 = ColorSchemas.Items.FindIndex(x => x.Name == AltColorSchema.Name);
             if (index2 > -1) {
-                ColorSchemas.Items[index2] = AltColorSchema;
+                if (ColorSchema.Name == "Custom" || ColorSchema.Name == "Alternative Custom") {
+                    // Apply custom colors to the custom schema
+                    ColorSchemas.Items[index2] = AltColorSchema;
+                } else {
+                    // Ensure the reference is the same as in the collection to get the combobox populated
+                    AltColorSchema = ColorSchemas.Items[index2];
+                }
             }
         }
 
@@ -122,6 +134,7 @@ namespace NINA.Profile {
             schema.NotificationWarningTextColor = ColorSchema.NotificationWarningTextColor;
             schema.NotificationErrorColor = ColorSchema.NotificationErrorColor;
             schema.NotificationErrorTextColor = ColorSchema.NotificationErrorTextColor;
+            schema.SequencerExpressionTextColor = ColorSchema.SequencerExpressionTextColor;
             ColorSchema = schema;
         }
 
@@ -143,6 +156,7 @@ namespace NINA.Profile {
             schema.NotificationWarningTextColor = AltColorSchema.NotificationWarningTextColor;
             schema.NotificationErrorColor = AltColorSchema.NotificationErrorColor;
             schema.NotificationErrorTextColor = AltColorSchema.NotificationErrorTextColor;
+            schema.SequencerExpressionTextColor = AltColorSchema.SequencerExpressionTextColor;
             AltColorSchema = schema;
         }
     }

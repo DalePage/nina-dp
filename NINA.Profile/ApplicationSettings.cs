@@ -1,7 +1,7 @@
 #region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -14,6 +14,7 @@
 
 using NINA.Core.Enum;
 using NINA.Core.Utility;
+using NINA.Core.Utility.Notification;
 using NINA.Profile.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -57,6 +58,8 @@ namespace NINA.Profile {
             SelectedPluggableBehaviors = new AsyncObservableCollection<KeyValuePair<string, string>>();
             SelectedPluggableBehaviorsLookup = ImmutableDictionary<string, string>.Empty;
             pageSize = 50;
+            notificationCorner = NotificationCorner.BottomRight;
+            notificationWorkArea = NotificationWorkArea.PrimaryScreen;
         }
 
         [DataMember]
@@ -169,6 +172,30 @@ namespace NINA.Profile {
                 if (value < 1) { value = 1; }
                 if (pageSize != value) {
                     pageSize = value;
+                    RaisePropertyChanged();
+                }
+            }
+        }
+
+        private NotificationWorkArea notificationWorkArea;
+        [DataMember]
+        public NotificationWorkArea NotificationWorkArea {
+            get => notificationWorkArea;
+            set {
+                if (notificationWorkArea != value) {
+                    notificationWorkArea = value;
+                    RaisePropertyChanged();
+                }
+            }
+        }
+
+        private NotificationCorner notificationCorner;
+        [DataMember]
+        public NotificationCorner NotificationCorner {
+            get => notificationCorner;
+            set {
+                if (notificationCorner != value) {
+                    notificationCorner = value;
                     RaisePropertyChanged();
                 }
             }

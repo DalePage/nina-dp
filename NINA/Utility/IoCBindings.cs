@@ -1,7 +1,7 @@
 ﻿#region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -43,6 +43,7 @@ using NINA.Plugin.Messaging;
 using NINA.Profile;
 using NINA.Profile.Interfaces;
 using NINA.Sequencer.Interfaces.Mediator;
+using NINA.Sequencer.Logic;
 using NINA.Sequencer.Mediator;
 using NINA.ViewModel;
 using NINA.ViewModel.FlatWizard;
@@ -97,6 +98,8 @@ namespace NINA.Utility {
                 services.AddSingleton<ICommandLineOptions>(f => _commandLineArguments);
 
                 services.AddSingleton<IMessageBroker, MessageBroker>();
+                
+                services.AddSingleton<ISymbolBroker, SymbolBroker>();
 
                 services.AddTransient<IUsbDeviceWatcher, UsbDeviceWatcher>();
 
@@ -325,7 +328,8 @@ namespace NINA.Utility {
                     f.GetService<IFlatDeviceMediator>(), f.GetService<IImageGeometryProvider>(), f.GetService<IApplicationStatusMediator>(), f.GetService<IMyMessageBoxVM>(),
                     f.GetService<INighttimeCalculator>(),
                     f.GetService<ITwilightCalculator>(),
-                    f.GetService<IImageSaveMediator>()));
+                    f.GetService<IImageSaveMediator>(),
+                    f.GetService<ISymbolBroker>()));
 
                 services.AddSingleton<IImageSaveController, ImageSaveController>();
                 services.AddSingleton<ISequenceNavigationVM, SequenceNavigationVM>();

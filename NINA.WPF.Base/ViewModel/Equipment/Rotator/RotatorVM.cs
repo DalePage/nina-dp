@@ -1,7 +1,7 @@
 #region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -90,6 +90,7 @@ namespace NINA.WPF.Base.ViewModel.Equipment.Rotator {
                 if (obj is bool) {
                     var reverse = (bool)obj;
                     if (Rotator != null && RotatorInfo.Connected) {
+                        Logger.Info($"Setting Rotator Reverse flag to {reverse}");
                         Rotator.Reverse = reverse;
                         profileService.ActiveProfile.RotatorSettings.Reverse2 = reverse;
                     }
@@ -215,7 +216,7 @@ namespace NINA.WPF.Base.ViewModel.Equipment.Rotator {
                     pos = adjustedTargetPosition;
                     await updateTimer.WaitForNextUpdate(ct);
                     BroadcastRotatorInfo();
-                    await (Moved?.InvokeAsync(this, new RotatorEventArgs(from: from, to: RotatorInfo.MechanicalPosition)) ?? Task.CompletedTask);
+                    await (MovedMechanical?.InvokeAsync(this, new RotatorEventArgs(from: from, to: RotatorInfo.MechanicalPosition)) ?? Task.CompletedTask);
                 } catch (OperationCanceledException) {
                 } finally {
                     applicationStatusMediator.StatusUpdate(
@@ -368,6 +369,7 @@ namespace NINA.WPF.Base.ViewModel.Equipment.Rotator {
                             token.ThrowIfCancellationRequested();
 
                             if (this.Rotator.CanReverse) {
+                                Logger.Info($"Restoring Rotator Reverse flag to {profileService.ActiveProfile.RotatorSettings.Reverse2}");
                                 this.Rotator.Reverse = profileService.ActiveProfile.RotatorSettings.Reverse2;
                             }
 

@@ -1,7 +1,7 @@
 ﻿#region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -14,18 +14,26 @@
 
 using Accord.Math;
 using Accord.Statistics.Models.Regression.Linear;
+using ASCOM.Com.DriverAccess;
 using Newtonsoft.Json;
+using NINA.Core.Locale;
 using NINA.Core.Model;
+using NINA.Core.Utility;
+using NINA.Core.Utility.WindowService;
+using NINA.Equipment.Interfaces.Mediator;
+using NINA.Image.ImageAnalysis;
 using NINA.Profile.Interfaces;
 using NINA.Sequencer.Container;
+using NINA.Sequencer.Interfaces;
 using NINA.Sequencer.SequenceItem;
 using NINA.Sequencer.SequenceItem.Autofocus;
+using NINA.Sequencer.Utility;
 using NINA.Sequencer.Validations;
-using NINA.Core.Utility;
-using NINA.Equipment.Interfaces.Mediator;
-using NINA.Core.Utility.WindowService;
-using NINA.WPF.Base.Interfaces.ViewModel;
 using NINA.ViewModel.Interfaces;
+using NINA.WPF.Base.Interfaces;
+using NINA.WPF.Base.Interfaces.Mediator;
+using NINA.WPF.Base.Interfaces.ViewModel;
+using NINA.WPF.Base.Mediator;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -40,6 +48,8 @@ using NINA.Sequencer.Utility;
 using NINA.Image.ImageAnalysis;
 using NINA.Sequencer.Interfaces;
 using NINA.WPF.Base.Interfaces;
+using NINA.Sequencer.Generators;
+using NINA.Sequencer.Logic;
 
 namespace NINA.Sequencer.Trigger.Autofocus {
 
@@ -49,37 +59,35 @@ namespace NINA.Sequencer.Trigger.Autofocus {
     [ExportMetadata("Category", "Lbl_SequenceCategory_Focuser")]
     [Export(typeof(ISequenceTrigger))]
     [JsonObject(MemberSerialization.OptIn)]
-    public class AutofocusAfterHFRIncreaseTrigger : SequenceTrigger, IValidatable {
+    [UsesExpressions]
+
+    public partial class AutofocusAfterHFRIncreaseTrigger : SequenceTrigger, IValidatable {
         private IProfileService profileService;
         private IImageHistoryVM history;
         private ICameraMediator cameraMediator;
         private IFilterWheelMediator filterWheelMediator;
         private IFocuserMediator focuserMediator;
         private IAutoFocusVMFactory autoFocusVMFactory;
+        private readonly ISafetyMonitorMediator safetyMonitorMediator;
 
         [ImportingConstructor]
-        public AutofocusAfterHFRIncreaseTrigger(IProfileService profileService, IImageHistoryVM history, ICameraMediator cameraMediator, IFilterWheelMediator filterWheelMediator, IFocuserMediator focuserMediator, IAutoFocusVMFactory autoFocusVMFactory) : base() {
+        public AutofocusAfterHFRIncreaseTrigger(IProfileService profileService, IImageHistoryVM history, ICameraMediator cameraMediator, IFilterWheelMediator filterWheelMediator, IFocuserMediator focuserMediator, IAutoFocusVMFactory autoFocusVMFactory, ISafetyMonitorMediator safetyMonitorMediator) : base() {
             this.history = history;
             this.profileService = profileService;
             this.cameraMediator = cameraMediator;
             this.filterWheelMediator = filterWheelMediator;
             this.focuserMediator = focuserMediator;
             this.autoFocusVMFactory = autoFocusVMFactory;
-            Amount = 5;
-            SampleSize = 10;
+            this.safetyMonitorMediator = safetyMonitorMediator;
             TriggerRunner.Add(new RunAutofocus(profileService, history, cameraMediator, filterWheelMediator, focuserMediator, autoFocusVMFactory));
         }
 
-        private AutofocusAfterHFRIncreaseTrigger(AutofocusAfterHFRIncreaseTrigger cloneMe) : this(cloneMe.profileService, cloneMe.history, cloneMe.cameraMediator, cloneMe.filterWheelMediator, cloneMe.focuserMediator, cloneMe.autoFocusVMFactory) {
+        private AutofocusAfterHFRIncreaseTrigger(AutofocusAfterHFRIncreaseTrigger cloneMe) : this(cloneMe.profileService, cloneMe.history, cloneMe.cameraMediator, cloneMe.filterWheelMediator, cloneMe.focuserMediator, cloneMe.autoFocusVMFactory, cloneMe.safetyMonitorMediator) {
             CopyMetaData(cloneMe);
         }
 
-        public override object Clone() {
-            return new AutofocusAfterHFRIncreaseTrigger(this) {
-                Amount = Amount,
-                SampleSize = SampleSize,
-                TriggerRunner = (SequentialContainer)TriggerRunner.Clone()
-            };
+        partial void AfterClone(AutofocusAfterHFRIncreaseTrigger clone) {
+            clone.TriggerRunner = (SequentialContainer)TriggerRunner.Clone();
         }
 
         private IList<string> issues = new List<string>();
@@ -92,27 +100,21 @@ namespace NINA.Sequencer.Trigger.Autofocus {
             }
         }
 
-        private double amount;
+        [IsExpression (Default = 5, Range = [1, 1000])]
+        public partial double Amount { get; set; }
+
+
+        [IsExpression (Default = 10, Range = [3, 1000])]
+        public partial int SampleSize { get; set; }
+
+        private bool trendPerFilter = true; // default true to keep the original behaviour creating an HFR trend per filter 
 
         [JsonProperty]
-        public double Amount {
-            get => amount;
+        public bool TrendPerFilter {
+            get => trendPerFilter;
             set {
-                amount = value;
+                trendPerFilter = value;
                 RaisePropertyChanged();
-            }
-        }
-
-        private int sampleSize;
-
-        [JsonProperty]
-        public int SampleSize {
-            get => sampleSize;
-            set {
-                if (value >= 3) {
-                    sampleSize = value;
-                    RaisePropertyChanged();
-                }
             }
         }
 
@@ -164,6 +166,7 @@ namespace NINA.Sequencer.Trigger.Autofocus {
             if (nextItem == null) { return false; }
             if (!(nextItem is IExposureItem exposureItem)) { return false; }
             if (exposureItem.ImageType != "LIGHT") { return false; }
+            if (safetyMonitorMediator.GetInfo() is { Connected: true, IsSafe: false }) { return false; }
 
             bool shouldTrigger = false;
             var fwInfo = this.filterWheelMediator.GetInfo();
@@ -177,7 +180,7 @@ namespace NINA.Sequencer.Trigger.Autofocus {
                 imageHistory = imageHistory.Where(point => point.Id > lastAF.Id).ToList();
             }
 
-            if (fwInfo != null && fwInfo.Connected && fwInfo.SelectedFilter != null) {
+            if (TrendPerFilter == true && fwInfo != null && fwInfo.Connected && fwInfo.SelectedFilter != null) {
                 //Further filter the history to only considere items by the current filter
                 Filter = fwInfo.SelectedFilter.Name;
 
@@ -192,7 +195,7 @@ namespace NINA.Sequencer.Trigger.Autofocus {
                 OriginalHFR = lowest.HFR;
 
                 //Take either the last point after AF Position as index or the sample size index, whichever is greater
-                var minimumSampleIndex = Math.Max(0, imageHistory.Count - sampleSize);
+                var minimumSampleIndex = Math.Max(0, imageHistory.Count - SampleSize);  // Note sampleSize isn't used
 
                 if (imageHistory.Count > minimumSampleIndex + 2) {
                     var data = imageHistory
@@ -240,7 +243,12 @@ namespace NINA.Sequencer.Trigger.Autofocus {
         }
 
         public override string ToString() {
-            return $"Trigger: {nameof(AutofocusAfterHFRIncreaseTrigger)}, Amount: {Amount}";
+            return $"Trigger: {nameof(AutofocusAfterHFRIncreaseTrigger)}, Amount: {Amount}, TrendPerFilter: {TrendPerFilter}";
+        }
+
+        public override void AfterParentChanged() {
+            base.AfterParentChanged();
+            Validate();
         }
 
         public bool Validate() {
@@ -254,6 +262,8 @@ namespace NINA.Sequencer.Trigger.Autofocus {
             if (!focuserInfo.Connected) {
                 i.Add(Loc.Instance["LblFocuserNotConnected"]);
             }
+
+            Expression.ValidateExpressions(i, AmountExpression, SampleSizeExpression);
 
             Issues = i;
             return i.Count == 0;

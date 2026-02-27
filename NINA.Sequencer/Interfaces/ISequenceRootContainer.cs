@@ -1,7 +1,7 @@
 ﻿#region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -35,5 +35,9 @@ namespace NINA.Sequencer.Container {
 
         Task RaiseFailureEvent(ISequenceEntity sender, Exception ex);
         event Func<object, SequenceEntityFailureEventArgs, Task> FailureEvent;
+
+        public Dictionary<string, bool> HasChanges { get; }
+        bool DoesHaveChanges(string hasChangeSet);
+        void SetChanged(string changedSet=SequenceEntityINPC.defaultChangeSet);
     }
 }

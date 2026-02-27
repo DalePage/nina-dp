@@ -1,7 +1,7 @@
 #region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -181,8 +181,8 @@ namespace NINA.Test.PlateSolving {
 
             imagingMediatorMock
                 .SetupSequence(x => x.CaptureAndPrepareImage(seq, It.IsAny<PrepareImageParameters>(), It.IsAny<CancellationToken>(), It.IsAny<IProgress<ApplicationStatus>>()))
-                .ReturnsAsync((IRenderedImage)null)
-                .ReturnsAsync((IRenderedImage)null)
+                .ReturnsAsync((IRenderedImage?)null)
+                .ReturnsAsync((IRenderedImage?)null)
                 .ReturnsAsync(renderedImageMock.Object);
             imageSolverMock
                 .Setup(x => x.Solve(imageDataMock.Object, It.IsAny<PlateSolveParameter>(), It.IsAny<IProgress<ApplicationStatus>>(), It.IsAny<CancellationToken>()))

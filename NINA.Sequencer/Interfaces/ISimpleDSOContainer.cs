@@ -1,7 +1,7 @@
 ﻿#region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -12,19 +12,20 @@
 
 #endregion "copyright"
 
-using NINA.Core.Model;
 using NINA.Astrometry;
+using NINA.Core.Enum;
+using NINA.Core.Model;
+using NINA.Equipment.Equipment.MyCamera;
 using NINA.ViewModel.Sequencer.SimpleSequence;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using NINA.Core.Enum;
-using NINA.Equipment.Equipment.MyCamera;
 
 namespace NINA.Sequencer.Container {
 
-    public interface ISimpleDSOContainer : ISequenceHasChanged {
+    public interface ISimpleDSOContainer  {
         ISimpleExposure ActiveExposure { get; set; }
         ICommand AddSimpleExposureCommand { get; }
         bool AutoFocusAfterHFRChange { get; set; }
@@ -58,6 +59,9 @@ namespace NINA.Sequencer.Container {
         bool SlewToTarget { get; set; }
         bool StartGuiding { get; set; }
         InputTarget Target { get; set; }
+        Dictionary<string, bool> HasChanges { get; }
+        void ClearHasChanged();
+        bool ShouldStopForChanges(string name, string hasChangedSet);
 
         ISimpleExposure AddSimpleExposure();
 

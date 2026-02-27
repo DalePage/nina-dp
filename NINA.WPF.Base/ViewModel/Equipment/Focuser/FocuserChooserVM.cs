@@ -1,7 +1,7 @@
 #region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -12,10 +12,11 @@
 
 #endregion "copyright"
 
+using Astroasis.AstroasisSDK;
 using NINA.Core.Locale;
 using NINA.Core.Utility;
 using NINA.Equipment.Equipment;
-using NINA.Equipment.Equipment.MyFilterWheel;
+using NINA.Equipment.Equipment.MyCamera.ToupTekAlike;
 using NINA.Equipment.Equipment.MyFocuser;
 using NINA.Equipment.Interfaces;
 using NINA.Equipment.Interfaces.ViewModel;
@@ -24,6 +25,7 @@ using NINA.Profile.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using ToupTek;
 using ZWOptical.ASISDK;
 
 namespace NINA.WPF.Base.ViewModel.Equipment.Focuser {
@@ -67,6 +69,37 @@ namespace NINA.WPF.Base.ViewModel.Equipment.Focuser {
                     Logger.Error(ex);
                 }
 
+                /* Oasis focusers */
+                try {
+                    Logger.Trace("Adding Oasis Focusers");
+                    int[] ids = new int[AOFocus.AO_FOCUSER_MAX_NUM];
+                    AOFocus.FocuserScan(out var focusers, ids);
+                    for (int i = 0; i < focusers; i++) {
+                        var focuser = new OasisFocuser(ids[i], profileService);
+                        Logger.Debug($"Adding Oasis Focuser: {focuser.Name}");
+                        devices.Add(focuser);
+                    }
+                } catch (Exception ex) {
+                    Logger.Error(ex);
+                }
+
+                /* ToupTek focusers */
+                try {
+                    Logger.Trace("Adding ToupTek Focusers");
+                    var toupTekDevices = ToupCam.EnumV2();
+                    foreach (var instance in toupTekDevices) {
+                        var info = instance.ToDeviceInfo();
+                        if (((ToupTekAlikeFlag)info.model.flag & ToupTekAlikeFlag.FLAG_AUTOFOCUSER) > 0) {
+                            var focuser = new ToupTekAlikeFocuser(info, new ToupTekSDKWrapper());
+                            Logger.Debug($"Adding ToupTek Focuser: {focuser.Name}");
+                            devices.Add(focuser);
+                        }
+                    }
+                } catch (Exception ex) {
+                    Logger.Error(ex);
+                }
+
+                /* ASCOM */
                 try {
                     var ascomInteraction = new ASCOMInteraction(profileService);
                     devices.AddRange(ascomInteraction.GetFocusers());

@@ -1,6 +1,6 @@
 #region "copyright"
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors 
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors 
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -41,6 +41,7 @@ using System.Runtime.InteropServices;
 using System.Globalization;
 using NINA.WPF.Base.View;
 using System.Threading.Tasks;
+using NINA.Sequencer;
 
 namespace NINA.ViewModel {
 
@@ -227,10 +228,17 @@ namespace NINA.ViewModel {
         private void Exit() {
             Sequencer.ISequenceNavigationVM vm = ((Interfaces.IMainWindowVM)Application.Current.MainWindow.DataContext).SequenceNavigationVM;
             if (vm.Initialized) {
-                if (vm.Sequence2VM.Sequencer.MainContainer.AskHasChanged(vm.Sequence2VM.Sequencer.MainContainer.Name)) {
+                // check for changes to the sequence
+                if (vm.Sequence2VM.ShouldStopForChanges(vm.Sequence2VM.Sequencer.MainContainer.Name, SequenceEntityINPC.defaultChangeSet)) {
                     return;
                 }
-                if (((SimpleSequenceVM)vm.SimpleSequenceVM).AskHasChanged()) {
+                // if main HasChanged flag isn't set (no actual edits to the sequence), check the exposure count
+                if ((!vm.Sequence2VM.Sequencer.MainContainer.HasChanges[SequenceEntityINPC.defaultChangeSet]) && (!ActiveProfile.SequenceSettings.ExcludeExposureCountFromHasChanges)) {
+                    if (vm.Sequence2VM.ShouldStopForChanges(Loc.Instance["LblExposureCount"], "Exposures")) {
+                        return;
+                    }
+                }
+                if (((SimpleSequenceVM)vm.SimpleSequenceVM).ShouldStopForChanges()) {
                     return;
                 }
                 if (cameraInfo.Connected) {

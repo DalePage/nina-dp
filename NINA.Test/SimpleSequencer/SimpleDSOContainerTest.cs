@@ -35,6 +35,7 @@ namespace NINA.Test.SimpleSequencer {
         private Mock<IImagingMediator> imagingMediatorMock;
         private Mock<IImageHistoryVM> imageHistoryVMMock;
         private Mock<IGuiderMediator> guiderMediatorMock;
+        private Mock<ISafetyMonitorMediator> safetyMonitorMediatorMock;
 
         [SetUp]
         public void Setup() {
@@ -50,6 +51,7 @@ namespace NINA.Test.SimpleSequencer {
             imagingMediatorMock = new Mock<IImagingMediator>();
             imageHistoryVMMock = new Mock<IImageHistoryVM>();
             guiderMediatorMock = new Mock<IGuiderMediator>();
+            safetyMonitorMediatorMock = new Mock<ISafetyMonitorMediator>();
 
             profileServiceMock.Setup(m => m.ActiveProfile.AstrometrySettings.Latitude).Returns(33.005699);
             profileServiceMock.Setup(m => m.ActiveProfile.AstrometrySettings.Longitude).Returns(-117.103254);
@@ -62,7 +64,7 @@ namespace NINA.Test.SimpleSequencer {
             factoryMock.Setup(x => x.GetCondition<LoopCondition>()).Returns(() => new LoopCondition());
             factoryMock.Setup(x => x.GetItem<SwitchFilter>()).Returns(() => new SwitchFilter(profileServiceMock.Object, filterWheelMediatorMock.Object));
             factoryMock.Setup(x => x.GetItem<TakeExposure>()).Returns(() => new TakeExposure(profileServiceMock.Object, cameraMediatorMock.Object, imagingMediatorMock.Object, imageSaveMediatorMock.Object, imageHistoryVMMock.Object));
-            factoryMock.Setup(x => x.GetTrigger<DitherAfterExposures>()).Returns(() =>   new DitherAfterExposures(guiderMediatorMock.Object, imageHistoryVMMock.Object, profileServiceMock.Object));
+            factoryMock.Setup(x => x.GetTrigger<DitherAfterExposures>()).Returns(() =>   new DitherAfterExposures(guiderMediatorMock.Object, imageHistoryVMMock.Object, profileServiceMock.Object, safetyMonitorMediatorMock.Object));
         }
 
         [Test]
@@ -81,23 +83,23 @@ namespace NINA.Test.SimpleSequencer {
             var se1 = sut.AddSimpleExposure();
             var loop1 = se1.GetLoopCondition() as LoopCondition;
             var exposure1 = se1.GetTakeExposure() as TakeExposure;
-            loop1.Iterations = item1Iterations;
-            loop1.CompletedIterations = item1CompletedIterations;
-            exposure1.ExposureTime = item1ExposureTime;
+            loop1?.Iterations = item1Iterations;
+            loop1?.CompletedIterations = item1CompletedIterations;
+            exposure1?.ExposureTime = item1ExposureTime;
 
             var se2 = sut.AddSimpleExposure();
             var loop2 = se2.GetLoopCondition() as LoopCondition;
             var exposure2 = se2.GetTakeExposure() as TakeExposure;
-            loop2.Iterations = item2Iterations;
-            loop2.CompletedIterations = item2CompletedIterations;
-            exposure2.ExposureTime = item2ExposureTime;
+            loop2?.Iterations = item2Iterations;
+            loop2?.CompletedIterations = item2CompletedIterations;
+            exposure2?.ExposureTime = item2ExposureTime;
 
             var se3 = sut.AddSimpleExposure();
             var loop3 = se3.GetLoopCondition() as LoopCondition;
             var exposure3 = se3.GetTakeExposure() as TakeExposure;
-            loop3.Iterations = item3Iterations;
-            loop3.CompletedIterations = item3CompletedIterations;
-            exposure3.ExposureTime = item3ExposureTime;
+            loop3?.Iterations = item3Iterations;
+            loop3?.CompletedIterations = item3CompletedIterations;
+            exposure3?.ExposureTime = item3ExposureTime;
 
 
             var time = sut.CalculateEstimatedRuntime();
@@ -129,23 +131,23 @@ namespace NINA.Test.SimpleSequencer {
             var se1 = sut.AddSimpleExposure();
             var loop1 = se1.GetLoopCondition() as LoopCondition;
             var exposure1 = se1.GetTakeExposure() as TakeExposure;
-            loop1.Iterations = 1;
-            loop1.CompletedIterations = item1Complete ? 1 : 0;
-            exposure1.ExposureTime = item1ExposureTime;
+            loop1?.Iterations = 1;
+            loop1?.CompletedIterations = item1Complete ? 1 : 0;
+            exposure1?.ExposureTime = item1ExposureTime;
 
             var se2 = sut.AddSimpleExposure();
             var loop2 = se2.GetLoopCondition() as LoopCondition;
             var exposure2 = se2.GetTakeExposure() as TakeExposure;
-            loop2.Iterations = 1;
-            loop2.CompletedIterations = item2Complete ? 1 : 0;
-            exposure2.ExposureTime = item2ExposureTime;
+            loop2?.Iterations = 1;
+            loop2?.CompletedIterations = item2Complete ? 1 : 0;
+            exposure2?.ExposureTime = item2ExposureTime;
 
             var se3 = sut.AddSimpleExposure();
             var loop3 = se3.GetLoopCondition() as LoopCondition;
             var exposure3 = se3.GetTakeExposure() as TakeExposure;
-            loop3.Iterations = 1;
-            loop3.CompletedIterations = item3Complete ? 1 : 0;
-            exposure3.ExposureTime = item3ExposureTime;
+            loop3?.Iterations = 1;
+            loop3?.CompletedIterations = item3Complete ? 1 : 0;
+            exposure3?.ExposureTime = item3ExposureTime;
 
 
             var time = sut.CalculateEstimatedRuntime();

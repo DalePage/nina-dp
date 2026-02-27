@@ -1,7 +1,7 @@
 ﻿#region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -12,18 +12,35 @@
 
 #endregion "copyright"
 
+using ASCOM.Com.DriverAccess;
 using Newtonsoft.Json;
+using NINA.Astrometry;
+using NINA.Core.Enum;
+using NINA.Core.Locale;
 using NINA.Core.Model;
+using NINA.Core.Utility;
+using NINA.Core.Utility.Notification;
+using NINA.Core.Utility.WindowService;
+using NINA.Equipment.Interfaces;
+using NINA.Equipment.Interfaces.Mediator;
+using NINA.Image.Interfaces;
+using NINA.PlateSolving;
 using NINA.Profile.Interfaces;
 using NINA.Sequencer.Container;
+using NINA.Sequencer.Interfaces;
 using NINA.Sequencer.SequenceItem;
+using NINA.Sequencer.SequenceItem.Platesolving;
+using NINA.Sequencer.Utility;
 using NINA.Sequencer.Validations;
-using NINA.Equipment.Interfaces.Mediator;
+using NINA.WPF.Base.Interfaces.Mediator;
 using NINA.WPF.Base.Interfaces.ViewModel;
+using NINA.WPF.Base.Mediator;
+using NINA.WPF.Base.ViewModel;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.ComponentModel.Composition;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,6 +59,8 @@ using NINA.Core.Utility.WindowService;
 using NINA.Image.Interfaces;
 using NINA.Equipment.Interfaces;
 using NINA.Sequencer.Interfaces;
+using NINA.Sequencer.Logic;
+using NINA.Sequencer.Generators;
 
 namespace NINA.Sequencer.Trigger.Platesolving {
 
@@ -51,7 +70,9 @@ namespace NINA.Sequencer.Trigger.Platesolving {
     [ExportMetadata("Category", "Lbl_SequenceCategory_Telescope")]
     [Export(typeof(ISequenceTrigger))]
     [JsonObject(MemberSerialization.OptIn)]
-    public class CenterAfterDriftTrigger : SequenceTrigger, IValidatable {
+    [UsesExpressions]
+
+    public partial class CenterAfterDriftTrigger : SequenceTrigger, IValidatable {
         private IProfileService profileService;
         private ITelescopeMediator telescopeMediator;
         private IFilterWheelMediator filterWheelMediator;
@@ -61,6 +82,7 @@ namespace NINA.Sequencer.Trigger.Platesolving {
         private IDomeMediator domeMediator;
         private IDomeFollower domeFollower;
         private readonly IApplicationStatusMediator applicationStatusMediator;
+        private readonly ISafetyMonitorMediator safetyMonitorMediator;
         private readonly IImageSaveMediator imageSaveMediator;
         private PlatesolvingImageFollower platesolvingImageFollower;
         private PlateSolvingStatusVM plateSolveStatusVM = new PlateSolvingStatusVM();
@@ -69,7 +91,7 @@ namespace NINA.Sequencer.Trigger.Platesolving {
         public CenterAfterDriftTrigger(
             IProfileService profileService, ITelescopeMediator telescopeMediator, IFilterWheelMediator filterWheelMediator, IGuiderMediator guiderMediator,
             IImagingMediator imagingMediator, ICameraMediator cameraMediator, IDomeMediator domeMediator, IDomeFollower domeFollower, IImageSaveMediator imageSaveMediator,
-            IApplicationStatusMediator applicationStatusMediator) : base() {
+            IApplicationStatusMediator applicationStatusMediator, ISafetyMonitorMediator safetyMonitorMediator) : base() {
             this.profileService = profileService;
             this.telescopeMediator = telescopeMediator;
             this.filterWheelMediator = filterWheelMediator;
@@ -80,22 +102,18 @@ namespace NINA.Sequencer.Trigger.Platesolving {
             this.domeFollower = domeFollower;
             this.imageSaveMediator = imageSaveMediator;
             this.applicationStatusMediator = applicationStatusMediator;
-            DistanceArcMinutes = 10;
-            AfterExposures = 1;
+            this.safetyMonitorMediator = safetyMonitorMediator;
             Coordinates = new InputCoordinates();
         }
 
-        private CenterAfterDriftTrigger(CenterAfterDriftTrigger cloneMe) : this(cloneMe.profileService, cloneMe.telescopeMediator, cloneMe.filterWheelMediator, cloneMe.guiderMediator, cloneMe.imagingMediator, cloneMe.cameraMediator, cloneMe.domeMediator, cloneMe.domeFollower, cloneMe.imageSaveMediator, cloneMe.applicationStatusMediator) {
+        private CenterAfterDriftTrigger(CenterAfterDriftTrigger cloneMe) : this(cloneMe.profileService, cloneMe.telescopeMediator, cloneMe.filterWheelMediator, cloneMe.guiderMediator,
+            cloneMe.imagingMediator, cloneMe.cameraMediator, cloneMe.domeMediator, cloneMe.domeFollower, cloneMe.imageSaveMediator, cloneMe.applicationStatusMediator, cloneMe.safetyMonitorMediator) {
             CopyMetaData(cloneMe);
         }
 
-        public override object Clone() {
-            return new CenterAfterDriftTrigger(this) {
-                TriggerRunner = (SequentialContainer)TriggerRunner.Clone(),
-                DistanceArcMinutes = DistanceArcMinutes,
-                AfterExposures = AfterExposures,
-                Coordinates = Coordinates?.Clone()
-            };
+        partial void AfterClone(CenterAfterDriftTrigger clone) {
+            TriggerRunner = (SequentialContainer)TriggerRunner.Clone();
+            Coordinates = Coordinates?.Clone();
         }
 
         private IList<string> issues = new List<string>();
@@ -111,18 +129,11 @@ namespace NINA.Sequencer.Trigger.Platesolving {
         [JsonProperty]
         public InputCoordinates Coordinates { get; set; }
 
-        private double distanceArcMinutes;
+        [IsExpression (Default = 10, Range = [0, 60, ExpressionRange.MIN_EXCLUSIVE], HasValidator = true)]
+        public partial double DistanceArcMinutes { get; set; }
 
-        [JsonProperty]
-        public double DistanceArcMinutes {
-            get => distanceArcMinutes;
-            set {
-                if (value > 0.0 && value != distanceArcMinutes) {
-                    distanceArcMinutes = value;
-                    RaisePropertyChanged(nameof(DistanceArcMinutes));
-                    RaisePropertyChanged(nameof(DistancePixels));
-                }
-            }
+        partial void DistanceArcMinutesExpressionValidator(Expression expr) {
+            RaisePropertyChanged("DistancePixels");
         }
 
         private bool inherited;
@@ -153,7 +164,8 @@ namespace NINA.Sequencer.Trigger.Platesolving {
         }
 
         public override async Task Execute(ISequenceContainer context, IProgress<ApplicationStatus> progress, CancellationToken token) {
-            var centerSequenceItem = new Center(profileService, telescopeMediator, imagingMediator, filterWheelMediator, guiderMediator, domeMediator, domeFollower, new PlateSolverFactoryProxy(), new WindowServiceFactory()) {
+            var centerSequenceItem = new Center(profileService, telescopeMediator, imagingMediator, filterWheelMediator, guiderMediator, 
+                domeMediator, domeFollower, new PlateSolverFactoryProxy(), new WindowServiceFactory()) {
                 Coordinates = Coordinates
             };
             await centerSequenceItem.Execute(progress, token);
@@ -161,19 +173,8 @@ namespace NINA.Sequencer.Trigger.Platesolving {
             platesolvingImageFollower.LastCoordinates = null;
         }
 
-        private int afterExposures;
-
-        [JsonProperty]
-        public int AfterExposures {
-            get => afterExposures;
-            set {
-                afterExposures = value;
-                if (platesolvingImageFollower != null) {
-                    platesolvingImageFollower.AfterExposures = value;
-                }
-                RaisePropertyChanged();
-            }
-        }
+        [IsExpression (Default = 1, Range = [1, ExpressionRange.NO_MAXIMUM])]
+        public partial int AfterExposures { get; set; }
 
         private void PlatesolvingImageFollower_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e) {
             var follower = (PlatesolvingImageFollower)sender;
@@ -209,6 +210,7 @@ namespace NINA.Sequencer.Trigger.Platesolving {
             if (nextItem == null) { return false; }
             if (!(nextItem is IExposureItem exposureItem)) { return false; }
             if (exposureItem.ImageType != "LIGHT") { return false; }
+            if (safetyMonitorMediator.GetInfo() is { Connected: true, IsSafe: false }) { return false; }
 
             if (LastDistanceArcMinutes >= DistanceArcMinutes) {
                 Logger.Info($"Drift exceeded threshold: {LastDistanceArcMinutes} / {DistanceArcMinutes} arc minutes");
@@ -258,6 +260,7 @@ namespace NINA.Sequencer.Trigger.Platesolving {
                     SequenceBlockInitialize();
                 }
             }
+            Validate();
         }
 
         public override string ToString() {
@@ -277,6 +280,8 @@ namespace NINA.Sequencer.Trigger.Platesolving {
             if (!Inherited) {
                 i.Add(Loc.Instance["LblNoTarget"]);
             }
+
+            Expression.ValidateExpressions(i, AfterExposuresExpression, DistanceArcMinutesExpression);
 
             Issues = i;
             return i.Count == 0;

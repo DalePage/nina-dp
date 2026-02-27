@@ -8,6 +8,10 @@ on:
       - master
       - develop
 
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build and Test on Windows
@@ -19,10 +23,10 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Setup .NET 8
+    - name: Setup .NET 10
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: '10.0.x'
 
     - name: Restore NuGet packages
       run: dotnet restore NINA.sln

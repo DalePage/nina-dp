@@ -1,7 +1,7 @@
 ﻿#region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -12,15 +12,22 @@
 
 #endregion "copyright"
 
+using ASCOM.Com.DriverAccess;
 using Newtonsoft.Json;
-using NINA.Equipment.Interfaces.Mediator;
+using NINA.Core.Locale;
 using NINA.Core.Model;
+using NINA.Core.Utility;
+using NINA.Equipment.Interfaces.Mediator;
+using NINA.Profile.Interfaces;
 using NINA.Sequencer.Container;
+using NINA.Sequencer.Interfaces;
 using NINA.Sequencer.SequenceItem;
 using NINA.Sequencer.SequenceItem.Guider;
+using NINA.Sequencer.Utility;
 using NINA.Sequencer.Validations;
-using NINA.WPF.Base.Interfaces.ViewModel;
 using NINA.ViewModel.Interfaces;
+using NINA.WPF.Base.Interfaces.ViewModel;
+using NINA.WPF.Base.Mediator;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -34,6 +41,8 @@ using NINA.Profile.Interfaces;
 using NINA.Sequencer.Utility;
 using NINA.Core.Utility;
 using NINA.Sequencer.Interfaces;
+using NINA.Sequencer.Generators;
+using NINA.Sequencer.Logic;
 
 namespace NINA.Sequencer.Trigger.Guider {
 
@@ -43,42 +52,37 @@ namespace NINA.Sequencer.Trigger.Guider {
     [ExportMetadata("Category", "Lbl_SequenceCategory_Guider")]
     [Export(typeof(ISequenceTrigger))]
     [JsonObject(MemberSerialization.OptIn)]
-    public class DitherAfterExposures : SequenceTrigger, IValidatable {
+    [UsesExpressions]
+
+    public partial class DitherAfterExposures : SequenceTrigger, IValidatable {
         private IGuiderMediator guiderMediator;
         private IImageHistoryVM history;
         private IProfileService profileService;
+        private readonly ISafetyMonitorMediator safetyMonitorMediator;
 
         [ImportingConstructor]
-        public DitherAfterExposures(IGuiderMediator guiderMediator, IImageHistoryVM history, IProfileService profileService) : base() {
+        public DitherAfterExposures(IGuiderMediator guiderMediator, IImageHistoryVM history, IProfileService profileService, ISafetyMonitorMediator safetyMonitorMediator) : base() {
             this.guiderMediator = guiderMediator;
             this.history = history;
             this.profileService = profileService;
+            this.safetyMonitorMediator = safetyMonitorMediator;
             AfterExposures = 1;
             TriggerRunner.Add(new Dither(guiderMediator, profileService));
         }
 
-        private DitherAfterExposures(DitherAfterExposures cloneMe) : this(cloneMe.guiderMediator, cloneMe.history, cloneMe.profileService) {
+        private DitherAfterExposures(DitherAfterExposures cloneMe) : this(cloneMe.guiderMediator, cloneMe.history, cloneMe.profileService, cloneMe.safetyMonitorMediator) {
             CopyMetaData(cloneMe);
         }
 
-        public override object Clone() {
-            return new DitherAfterExposures(this) {
-                AfterExposures = AfterExposures,
-                TriggerRunner = (SequentialContainer)TriggerRunner.Clone()
-            };
+        partial void AfterClone(DitherAfterExposures clone) {
+            clone.TriggerRunner = (SequentialContainer)TriggerRunner.Clone();
         }
 
         private int lastTriggerId = 0;
-        private int afterExposures;
 
-        [JsonProperty]
-        public int AfterExposures {
-            get => afterExposures;
-            set {
-                afterExposures = value;
-                RaisePropertyChanged();
-            }
-        }
+
+        [IsExpression(Default = 3, Range = [0, 32])]
+        public partial int AfterExposures { get; set; }
 
         private IList<string> issues = new List<string>();
 
@@ -105,6 +109,7 @@ namespace NINA.Sequencer.Trigger.Guider {
             if (nextItem == null) { return false; }
             if (!(nextItem is IExposureItem exposureItem)) { return false; }
             if (exposureItem.ImageType != "LIGHT") { return false; }
+            if (safetyMonitorMediator.GetInfo() is { Connected: true, IsSafe: false }) { return false; }
 
             RaisePropertyChanged(nameof(ProgressExposures));
             if(lastTriggerId > history.ImageHistory.Count) { 
@@ -127,6 +132,11 @@ namespace NINA.Sequencer.Trigger.Guider {
             return $"Trigger: {nameof(DitherAfterExposures)}, After Exposures: {AfterExposures}";
         }
 
+        public override void AfterParentChanged() {
+            base.AfterParentChanged();
+            Validate();
+        }
+
         public bool Validate() {
             var i = new List<string>();
             var info = guiderMediator.GetInfo();
@@ -135,6 +145,7 @@ namespace NINA.Sequencer.Trigger.Guider {
                 i.Add(Loc.Instance["LblGuiderNotConnected"]);
             }
 
+            Expression.ValidateExpressions(i, AfterExposuresExpression);
             Issues = i;
             return i.Count == 0;
         }

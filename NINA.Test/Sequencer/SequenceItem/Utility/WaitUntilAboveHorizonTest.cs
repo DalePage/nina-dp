@@ -1,7 +1,7 @@
 ﻿#region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -14,20 +14,21 @@
 
 using FluentAssertions;
 using Moq;
-using NINA.Profile.Interfaces;
-using NINA.Sequencer;
-using NINA.Sequencer.Container;
-using NINA.Sequencer.SequenceItem.Utility;
-using NINA.Core.Utility;
 using NINA.Astrometry;
 using NINA.Core.Enum;
+using NINA.Core.Model;
+using NINA.Core.Utility;
 using NINA.Equipment.Interfaces.Mediator;
+using NINA.Profile;
+using NINA.Profile.Interfaces;
+using NINA.Sequencer;
+using NINA.Sequencer.Conditions;
+using NINA.Sequencer.Container;
+using NINA.Sequencer.SequenceItem.Utility;
 using NUnit.Framework;
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using NINA.Core.Model;
-using NINA.Profile;
 
 namespace NINA.Test.Sequencer.SequenceItem.Utility {
 
@@ -88,8 +89,8 @@ namespace NINA.Test.Sequencer.SequenceItem.Utility {
 
             sut.AttachNewParent(parentMock.Object);
 
-            sut.Data.Coordinates.Coordinates.RA.Should().Be(coordinates.RA);
-            sut.Data.Coordinates.Coordinates.Dec.Should().Be(coordinates.Dec);
+            sut.Coordinates.Coordinates.RA.Should().Be(coordinates.RA);
+            sut.Coordinates.Coordinates.Dec.Should().Be(coordinates.Dec);
         }
 
         [Test]
@@ -99,8 +100,11 @@ namespace NINA.Test.Sequencer.SequenceItem.Utility {
             var coordinates = new Coordinates(Angle.ByDegree(1), Angle.ByDegree(2), Epoch.J2000, mockDateProvider.Object);
 
             sut.Data.Coordinates.Coordinates = coordinates;
+            sut.Data.Offset = 0;
 
-            await sut.Run(default, default);
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1))) {
+                await sut.Run(default, cts.Token);
+            }
 
             sut.Status.Should().Be(SequenceEntityStatus.FINISHED);
             mockDateProvider.VerifyGet(x => x.Now, Times.Exactly(2));
@@ -116,8 +120,11 @@ namespace NINA.Test.Sequencer.SequenceItem.Utility {
             var coordinates = new Coordinates(Angle.ByDegree(1), Angle.ByDegree(2), Epoch.J2000, mockDateProvider.Object);
 
             sut.Data.Coordinates.Coordinates = coordinates;
+            sut.Data.Offset = 0;
 
-            await sut.Run(default, default);
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1))) {
+                await sut.Run(default, cts.Token);
+            }
 
             sut.Status.Should().Be(SequenceEntityStatus.FINISHED);
             mockDateProvider.VerifyGet(x => x.Now, Times.Exactly(3));
@@ -136,8 +143,12 @@ namespace NINA.Test.Sequencer.SequenceItem.Utility {
             var coordinates = new Coordinates(Angle.ByDegree(1), Angle.ByDegree(2), Epoch.J2000, mockDateProvider.Object);
 
             sut.Data.Coordinates.Coordinates = coordinates;
+            sut.Coordinates = sut.Data.Coordinates;
+            sut.Data.Offset = 0;
 
-            await sut.Run(default, default);
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1))) { 
+                await sut.Run(default, cts.Token);
+            }
 
             sut.Status.Should().Be(SequenceEntityStatus.FINISHED);
             mockDateProvider.VerifyGet(x => x.Now, Times.Exactly(2));
@@ -159,8 +170,11 @@ namespace NINA.Test.Sequencer.SequenceItem.Utility {
             var coordinates = new Coordinates(Angle.ByDegree(1), Angle.ByDegree(2), Epoch.J2000, mockDateProvider.Object);
 
             sut.Data.Coordinates.Coordinates = coordinates;
+            sut.Data.Offset = 0;
 
-            await sut.Run(default, default);
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1))) {
+                await sut.Run(default, cts.Token);
+            }
 
             sut.Status.Should().Be(SequenceEntityStatus.FINISHED);
             mockDateProvider.VerifyGet(x => x.Now, Times.Exactly(4));

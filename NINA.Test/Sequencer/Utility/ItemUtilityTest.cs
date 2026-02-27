@@ -1,7 +1,7 @@
 ﻿#region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -207,6 +207,7 @@ namespace NINA.Test.Sequencer.Utility {
             var cameraMediatorMock = new Mock<ICameraMediator>();
             var focuserMediatorMock = new Mock<IFocuserMediator>();
             var meridianFlipVMFactoryMock = new Mock<IMeridianFlipVMFactory>();
+            var safetyMonitorMediatorMock = new Mock<ISafetyMonitorMediator>();
 
             telescopeMediatorMock.Setup(x => x.GetInfo()).Returns(new TelescopeInfo() {
                 Connected = true,
@@ -215,7 +216,7 @@ namespace NINA.Test.Sequencer.Utility {
             });
             profileServiceMock.SetupGet(x => x.ActiveProfile.MeridianFlipSettings.UseSideOfPier).Returns(false);
 
-            var flip = new MeridianFlipTrigger(profileServiceMock.Object, cameraMediatorMock.Object, telescopeMediatorMock.Object, focuserMediatorMock.Object, applicationStatusMediatorMock.Object, meridianFlipVMFactoryMock.Object);
+            var flip = new MeridianFlipTrigger(profileServiceMock.Object, cameraMediatorMock.Object, telescopeMediatorMock.Object, focuserMediatorMock.Object, applicationStatusMediatorMock.Object, meridianFlipVMFactoryMock.Object, safetyMonitorMediatorMock.Object);
 
             flip.ShouldTrigger(null, null);
 

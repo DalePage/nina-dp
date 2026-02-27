@@ -1,7 +1,7 @@
 ﻿#region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -13,14 +13,25 @@
 #endregion "copyright"
 
 using Newtonsoft.Json;
+using NINA.Core.Locale;
 using NINA.Core.Model;
+using NINA.Core.Utility;
+using NINA.Equipment.Interfaces;
+using NINA.Equipment.Interfaces.Mediator;
+using NINA.Image.ImageAnalysis;
 using NINA.Profile.Interfaces;
 using NINA.Sequencer.Container;
+using NINA.Sequencer.Generators;
+using NINA.Sequencer.Interfaces;
+using NINA.Sequencer.Logic;
 using NINA.Sequencer.SequenceItem;
 using NINA.Sequencer.SequenceItem.Autofocus;
+using NINA.Sequencer.Utility;
 using NINA.Sequencer.Validations;
-using NINA.Equipment.Interfaces.Mediator;
+using NINA.WPF.Base.Interfaces;
+using NINA.WPF.Base.Interfaces.Mediator;
 using NINA.WPF.Base.Interfaces.ViewModel;
+using NINA.WPF.Base.Mediator;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -29,13 +40,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using NINA.WPF.Base.Interfaces.Mediator;
-using NINA.Core.Locale;
-using NINA.Core.Utility;
-using NINA.Sequencer.Utility;
-using NINA.Image.ImageAnalysis;
-using NINA.Sequencer.Interfaces;
-using NINA.WPF.Base.Interfaces;
 
 namespace NINA.Sequencer.Trigger.Autofocus {
 
@@ -45,7 +49,9 @@ namespace NINA.Sequencer.Trigger.Autofocus {
     [ExportMetadata("Category", "Lbl_SequenceCategory_Focuser")]
     [Export(typeof(ISequenceTrigger))]
     [JsonObject(MemberSerialization.OptIn)]
-    public class AutofocusAfterExposures : SequenceTrigger, IValidatable {
+    [UsesExpressions]
+
+    public partial class AutofocusAfterExposures : SequenceTrigger, IValidatable {
         private IProfileService profileService;
 
         private IImageHistoryVM history;
@@ -53,30 +59,26 @@ namespace NINA.Sequencer.Trigger.Autofocus {
         private IFilterWheelMediator filterWheelMediator;
         private IFocuserMediator focuserMediator;
         private IAutoFocusVMFactory autoFocusVMFactory;
-
-        private int afterExposures;
+        private readonly ISafetyMonitorMediator safetyMonitorMediator;
 
         [ImportingConstructor]
-        public AutofocusAfterExposures(IProfileService profileService, IImageHistoryVM history, ICameraMediator cameraMediator, IFilterWheelMediator filterWheelMediator, IFocuserMediator focuserMediator, IAutoFocusVMFactory autoFocusVMFactory) : base() {
+        public AutofocusAfterExposures(IProfileService profileService, IImageHistoryVM history, ICameraMediator cameraMediator, IFilterWheelMediator filterWheelMediator, IFocuserMediator focuserMediator, IAutoFocusVMFactory autoFocusVMFactory, ISafetyMonitorMediator safetyMonitorMediator) : base() {
             this.history = history;
             this.profileService = profileService;
             this.cameraMediator = cameraMediator;
             this.filterWheelMediator = filterWheelMediator;
             this.focuserMediator = focuserMediator;
             this.autoFocusVMFactory = autoFocusVMFactory;
-            AfterExposures = 5;
+            this.safetyMonitorMediator = safetyMonitorMediator;
             TriggerRunner.Add(new RunAutofocus(profileService, history, cameraMediator, filterWheelMediator, focuserMediator, autoFocusVMFactory));
         }
 
-        private AutofocusAfterExposures(AutofocusAfterExposures cloneMe) : this(cloneMe.profileService, cloneMe.history, cloneMe.cameraMediator, cloneMe.filterWheelMediator, cloneMe.focuserMediator, cloneMe.autoFocusVMFactory) {
+        private AutofocusAfterExposures(AutofocusAfterExposures cloneMe) : this(cloneMe.profileService, cloneMe.history, cloneMe.cameraMediator, cloneMe.filterWheelMediator, cloneMe.focuserMediator, cloneMe.autoFocusVMFactory, cloneMe.safetyMonitorMediator) {
             CopyMetaData(cloneMe);
         }
 
-        public override object Clone() {
-            return new AutofocusAfterExposures(this) {
-                AfterExposures = AfterExposures,
-                TriggerRunner = (SequentialContainer)TriggerRunner.Clone()
-            };
+        partial void AfterClone(AutofocusAfterExposures clone) {
+            clone.TriggerRunner = (SequentialContainer)TriggerRunner.Clone();
         }
 
         private IList<string> issues = new List<string>();
@@ -89,14 +91,8 @@ namespace NINA.Sequencer.Trigger.Autofocus {
             }
         }
 
-        [JsonProperty]
-        public int AfterExposures {
-            get => afterExposures;
-            set {
-                afterExposures = value;
-                RaisePropertyChanged();
-            }
-        }
+        [IsExpression (Default = 5)]
+        public partial int AfterExposures { get; set; }
 
         public int ProgressExposures { get; private set; }
 
@@ -108,7 +104,7 @@ namespace NINA.Sequencer.Trigger.Autofocus {
             if (nextItem == null) { return false; }
             if (!(nextItem is IExposureItem exposureItem)) { return false; }
             if (exposureItem.ImageType != "LIGHT") { return false; }
-
+            if (safetyMonitorMediator.GetInfo() is { Connected: true, IsSafe: false }) { return false; }
 
             var lastAFId = history.AutoFocusPoints?.LastOrDefault()?.Id ?? 0;
             var lightImageHistory = history.ImageHistory.Where(x => x.Type == "LIGHT" && x.Id > lastAFId).ToList();
@@ -135,6 +131,11 @@ namespace NINA.Sequencer.Trigger.Autofocus {
             return $"Trigger: {nameof(AutofocusAfterExposures)}, AfterExposures: {AfterExposures}";
         }
 
+        public override void AfterParentChanged() {
+            base.AfterParentChanged();
+            Validate();
+        }
+
         public bool Validate() {
             var i = new List<string>();
             var cameraInfo = cameraMediator.GetInfo();
@@ -146,6 +147,8 @@ namespace NINA.Sequencer.Trigger.Autofocus {
             if (!focuserInfo.Connected) {
                 i.Add(Loc.Instance["LblFocuserNotConnected"]);
             }
+
+            Expression.ValidateExpressions(i, AfterExposuresExpression);
 
             Issues = i;
             return i.Count == 0;

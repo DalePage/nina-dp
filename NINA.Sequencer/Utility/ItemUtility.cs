@@ -1,7 +1,7 @@
 ﻿#region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -377,15 +377,13 @@ namespace NINA.Sequencer.Utility {
 
         [Obsolete]
         public static Coordinates CalculateSunRADec(ObserverInfo observer) {
-            double jd = AstroUtil.GetJulianDate(DateTime.Now);
-            NOVAS.SkyPosition skyPos = AstroUtil.GetSunPosition(DateTime.Now, jd, observer);
+            NOVAS.SkyPosition skyPos = AstroUtil.GetSunPosition(DateTime.Now, observer);
             return new Coordinates(skyPos.RA, skyPos.Dec, Epoch.JNOW, Coordinates.RAType.Hours);
         }
 
         [Obsolete]
         public static Coordinates CalculateMoonRADec(ObserverInfo observer) {
-            double jd = AstroUtil.GetJulianDate(DateTime.Now);
-            NOVAS.SkyPosition skyPos = AstroUtil.GetMoonPosition(DateTime.Now, jd, observer);
+            NOVAS.SkyPosition skyPos = AstroUtil.GetMoonPosition(DateTime.Now, observer);
             return new Coordinates(skyPos.RA, skyPos.Dec, Epoch.JNOW, Coordinates.RAType.Hours);
         }
     }

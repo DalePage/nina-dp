@@ -1,7 +1,7 @@
 ﻿#region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -26,13 +26,16 @@ using System.Windows.Media;
 using NINA.Sequencer.Utility;
 using NINA.Core.Locale;
 using NINA.Core.Utility.Notification;
+using NINA.Sequencer.Logic;
+using System.Diagnostics;
 
 namespace NINA.Sequencer.SequenceItem {
 
     [JsonObject(MemberSerialization.OptIn)]
-    public abstract class SequenceItem : SequenceHasChanged, ISequenceItem {
+    public abstract class SequenceItem : SequenceEntityINPC, ISequenceItem {
 
         public SequenceItem() {
+            
         }
 
         public SequenceItem(SequenceItem cloneMe) {
@@ -44,10 +47,12 @@ namespace NINA.Sequencer.SequenceItem {
             Name = cloneMe.Name;
             Category = cloneMe.Category;
             Description = cloneMe.Description;
+            SymbolBroker = cloneMe.SymbolBroker;
             Attempts = cloneMe.Attempts;
             ErrorBehavior = cloneMe.ErrorBehavior;
         }
 
+        private ISymbolBroker symbolBroker;
         private string name;
         private bool showMenu;
         private SequenceEntityStatus status = SequenceEntityStatus.CREATED;
@@ -67,6 +72,14 @@ namespace NINA.Sequencer.SequenceItem {
             }
             
         });
+
+        public ISymbolBroker SymbolBroker {
+            get => symbolBroker;
+            set {
+                symbolBroker = value;
+                RaisePropertyChanged();
+            }
+        }
 
         public string Name {
             get => name;
@@ -140,9 +153,7 @@ namespace NINA.Sequencer.SequenceItem {
         public abstract object Clone();
 
         public void Detach() {
-            if (!(this is ISimpleDSOContainer) || !AskHasChanged(Name)) {
-                Parent?.Remove(this);
-            }
+            Parent?.Remove(this);
         }
 
         public abstract Task Execute(IProgress<ApplicationStatus> progress, CancellationToken token);
@@ -341,6 +352,13 @@ namespace NINA.Sequencer.SequenceItem {
         }
 
         public virtual void Teardown() {
+        }
+        public bool HasChanged { get; set; }
+
+        public void ClearHasChanged() { }
+
+        public bool AskHasChanged(string name) {
+            return false;
         }
     }
 }

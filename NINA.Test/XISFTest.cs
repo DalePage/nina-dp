@@ -1,7 +1,7 @@
 #region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -310,6 +310,63 @@ namespace NINA.Test {
         }
 
         [Test]
+        public void XISFCompressZStdTest() {
+            const int imgSize = 128;
+            var props = new ImageProperties(width: imgSize, height: imgSize, bitDepth: 16, isBayered: false, gain: 0, offset: 0);
+            const string imageType = "LIGHT";
+            var data = new ushort[imgSize * imgSize];
+            var length = data.Length * sizeof(ushort);
+
+            var fileSaveInfo = new FileSaveInfo {
+                FilePath = string.Empty,
+                FilePattern = string.Empty,
+                FileType = NINA.Core.Enum.FileTypeEnum.XISF,
+                XISFCompressionType = NINA.Core.Enum.XISFCompressionTypeEnum.ZSTD
+            };
+
+            for (ushort i = 0; i < data.Length; i++) {
+                data[i] = ushort.MaxValue;
+            }
+
+            var header = new XISFHeader();
+            header.AddImageMetaData(props, imageType);
+            var sut = new XISF(header);
+            sut.AddAttachedImage(data, fileSaveInfo);
+
+            sut.Header.Image.Should().HaveAttribute("compression", $"zstd:{length}");
+            sut.Header.Image.Should().HaveAttribute("location", $"attachment:{sut.PaddedBlockSize}:{sut.Data.Data.Length}");
+        }
+
+        [Test]
+        public void XISFCompressZStdShuffledTest() {
+            const int imgSize = 128;
+            var props = new ImageProperties(width: imgSize, height: imgSize, bitDepth: 16, isBayered: false, gain: 0, offset: 0);
+            const string imageType = "LIGHT";
+            var data = new ushort[imgSize * imgSize];
+            var length = data.Length * sizeof(ushort);
+
+            var fileSaveInfo = new FileSaveInfo {
+                FilePath = string.Empty,
+                FilePattern = string.Empty,
+                FileType = NINA.Core.Enum.FileTypeEnum.XISF,
+                XISFCompressionType = NINA.Core.Enum.XISFCompressionTypeEnum.ZSTD,
+                XISFByteShuffling = true
+            };
+
+            for (ushort i = 0; i < data.Length; i++) {
+                data[i] = ushort.MaxValue;
+            }
+
+            var header = new XISFHeader();
+            header.AddImageMetaData(props, imageType);
+            var sut = new XISF(header);
+            sut.AddAttachedImage(data, fileSaveInfo);
+
+            sut.Header.Image.Should().HaveAttribute("compression", $"zstd+sh:{length}:{sizeof(ushort)}");
+            sut.Header.Image.Should().HaveAttribute("location", $"attachment:{sut.PaddedBlockSize}:{sut.Data.Data.Length}");
+        }
+
+        [Test]
         public void XISFChecksumSHA1Test() {
             const int imgSize = 128;
             var props = new ImageProperties(width: imgSize, height: imgSize, bitDepth: 16, isBayered: false, gain: 0, offset: 0);
@@ -414,12 +471,12 @@ namespace NINA.Test {
             sut.MetaData.Should().HaveElement(ns + "Property")
                 .Which.Should().BeOfType<XElement>();
 
-            sut.MetaData.Elements(ns + "Property").First(x => x.Attribute("id").Value == "XISF:CreatorApplication")
+            sut.MetaData.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == "XISF:CreatorApplication")
                 .Should().HaveAttribute("type", "String")
                 .And.HaveAttribute("comment", "")
                 .And.HaveValue("N.I.N.A. - Nighttime Imaging 'N' Astronomy");
 
-            sut.MetaData.Elements(ns + "Property").First(x => x.Attribute("id").Value == "XISF:CreationTime")
+            sut.MetaData.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == "XISF:CreationTime")
                 .Should().HaveAttribute("type", "TimePoint")
                 .And.HaveAttribute("comment", "");
 
@@ -479,7 +536,7 @@ namespace NINA.Test {
             var sut = new XISFHeader();
             sut.AddMetaDataProperty(id, type, value, comment);
 
-            sut.MetaData.Elements(ns + "Property").First(x => x.Attribute("id").Value == id)
+            sut.MetaData.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == id)
                 .Should().HaveAttribute("type", type)
                 .And.HaveAttribute("comment", comment)
                 .And.HaveAttribute("value", value);
@@ -496,7 +553,7 @@ namespace NINA.Test {
             var sut = new XISFHeader();
             sut.AddMetaDataProperty(id, type, value, comment);
 
-            sut.MetaData.Elements(ns + "Property").First(x => x.Attribute("id").Value == id)
+            sut.MetaData.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == id)
                 .Should().HaveAttribute("type", type)
                 .And.HaveAttribute("comment", comment)
                 .And.HaveValue(value);
@@ -513,7 +570,7 @@ namespace NINA.Test {
             var sut = new XISFHeader();
             sut.AddMetaDataProperty(new string[] { id, type }, value, comment);
 
-            sut.MetaData.Elements(ns + "Property").First(x => x.Attribute("id").Value == id)
+            sut.MetaData.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == id)
                 .Should().HaveAttribute("type", type)
                 .And.HaveAttribute("comment", comment)
                 .And.HaveAttribute("value", value);
@@ -530,7 +587,7 @@ namespace NINA.Test {
             var sut = new XISFHeader();
             sut.AddMetaDataProperty(new string[] { id, type }, value, comment);
 
-            sut.MetaData.Elements(ns + "Property").First(x => x.Attribute("id").Value == id)
+            sut.MetaData.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == id)
                 .Should().HaveAttribute("type", type)
                 .And.HaveAttribute("comment", comment)
                 .And.HaveValue(value);
@@ -563,12 +620,12 @@ namespace NINA.Test {
             sut.AddImageMetaData(props, imageType);
             sut.AddImageProperty(new string[] { id, type }, value, comment, true);
 
-            sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == id)
+            sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == id)
                 .Should().HaveAttribute("type", type)
                 .And.HaveAttribute("comment", comment)
                 .And.HaveValue(value);
 
-            sut.Image.Elements(ns + "FITSKeyword").Where(x => x.Attribute("name").Value != "IMAGETYP").Should().BeEmpty();
+            sut.Image.Elements(ns + "FITSKeyword").Where(x => x.Attribute("name")?.Value != "IMAGETYP").Should().BeEmpty();
         }
 
         [Test]
@@ -587,12 +644,12 @@ namespace NINA.Test {
             sut.AddImageMetaData(props, imageType);
             sut.AddImageProperty(new string[] { id, type, name }, value, comment, false);
 
-            sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == id)
+            sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == id)
                 .Should().HaveAttribute("type", type)
                 .And.HaveAttribute("comment", comment)
                 .And.HaveValue(value);
 
-            sut.Image.Elements(ns + "FITSKeyword").Where(x => x.Attribute("name").Value != "IMAGETYP").Should().BeEmpty();
+            sut.Image.Elements(ns + "FITSKeyword").Where(x => x.Attribute("name")?.Value != "IMAGETYP").Should().BeEmpty();
         }
 
         [Test]
@@ -611,12 +668,12 @@ namespace NINA.Test {
             sut.AddImageMetaData(props, imageType);
             sut.AddImageProperty(new string[] { id, type, name }, value, comment);
 
-            sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == id)
+            sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == id)
                 .Should().HaveAttribute("type", type)
                 .And.HaveAttribute("comment", comment)
                 .And.HaveValue(value);
 
-            sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name").Value == name)
+            sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name")?.Value == name)
                 .Should().HaveAttribute("value", "'"+value+"'")
                 .And.HaveAttribute("comment", comment);
         }
@@ -646,7 +703,7 @@ namespace NINA.Test {
             sut.AddImageMetaData(props, imageType);
             sut.AddImageFITSKeyword(name, value, comment);
 
-            sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name").Value == name)
+            sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name")?.Value == name)
                 .Should().HaveAttribute("value", "'"+value+"'")
                 .And.HaveAttribute("comment", comment);
         }
@@ -670,32 +727,32 @@ namespace NINA.Test {
             sut.Populate(metaData);
 
             //Assert
-            sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == "Instrument:Camera:XBinning")
+            sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == "Instrument:Camera:XBinning")
                 .Should().HaveAttribute("type", "Int32")
                 .And.HaveAttribute("comment", "X axis binning factor")
                 .And.HaveAttribute("value", "1");
 
-            sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name").Value == "XBINNING")
+            sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name")?.Value == "XBINNING")
                 .Should().HaveAttribute("name", "XBINNING")
                 .And.HaveAttribute("value", "1")
                 .And.HaveAttribute("comment", "X axis binning factor");
 
-            sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == "Instrument:Camera:YBinning")
+            sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == "Instrument:Camera:YBinning")
                 .Should().HaveAttribute("type", "Int32")
                 .And.HaveAttribute("comment", "Y axis binning factor")
                 .And.HaveAttribute("value", "1");
 
-            sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name").Value == "YBINNING")
+            sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name")?.Value == "YBINNING")
                 .Should().HaveAttribute("name", "YBINNING")
                 .And.HaveAttribute("value", "1")
                 .And.HaveAttribute("comment", "Y axis binning factor");
 
-            sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name").Value == "EQUINOX")
+            sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name")?.Value == "EQUINOX")
                 .Should().HaveAttribute("name", "EQUINOX")
                 .And.HaveAttribute("value", "2000.0")
                 .And.HaveAttribute("comment", "Equinox of celestial coordinate system");
 
-            sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name").Value == "SWCREATE")
+            sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name")?.Value == "SWCREATE")
                 .Should().HaveAttribute("name", "SWCREATE")
                 .And.HaveAttribute("value", "'"+string.Format("N.I.N.A. {0} ({1})", NINA.Core.Utility.CoreUtil.Version, DllLoader.IsX86() ? "x86" : "x64")+"'")
                 .And.HaveAttribute("comment", "Software that created this file");
@@ -737,12 +794,12 @@ namespace NINA.Test {
 
             foreach (var property in expectedProperties) {
                 if (property.Type != "String") {
-                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == property.Id)
+                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == property.Id)
                         .Should().HaveAttribute("type", property.Type)
                         .And.HaveAttribute("comment", property.Comment)
                         .And.HaveAttribute("value", property.Value);
                 } else {
-                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == property.Id)
+                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == property.Id)
                         .Should().HaveAttribute("type", property.Type)
                         .And.HaveAttribute("comment", property.Comment)
                         .And.HaveValue(property.Value);
@@ -750,7 +807,7 @@ namespace NINA.Test {
             }
 
             foreach (var card in expectedFITSKeywords) {
-                sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name").Value == card.Key)
+                sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name")?.Value == card.Key)
                 .Should().HaveAttribute("name", card.Key)
                 .And.HaveAttribute("value", card.Value.Trim())
                 .And.HaveAttribute("comment", card.Comment);
@@ -809,12 +866,12 @@ namespace NINA.Test {
 
             foreach (var property in expectedProperties) {
                 if (property.Type != "String") {
-                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == property.Id)
+                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == property.Id)
                         .Should().HaveAttribute("type", property.Type)
                         .And.HaveAttribute("comment", property.Comment)
                         .And.HaveAttribute("value", property.Value);
                 } else {
-                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == property.Id)
+                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == property.Id)
                         .Should().HaveAttribute("type", property.Type)
                         .And.HaveAttribute("comment", property.Comment)
                         .And.HaveValue(property.Value);
@@ -822,7 +879,7 @@ namespace NINA.Test {
             }
 
             foreach (var card in expectedFITSKeywords) {
-                sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name").Value == card.Key)
+                sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name")?.Value == card.Key)
                 .Should().HaveAttribute("name", card.Key)
                 .And.HaveAttribute("value", card.Value.Trim())
                 .And.HaveAttribute("comment", card.Comment);
@@ -868,12 +925,12 @@ namespace NINA.Test {
 
             foreach (var property in expectedProperties) {
                 if (property.Type != "String") {
-                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == property.Id)
+                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == property.Id)
                         .Should().HaveAttribute("type", property.Type)
                         .And.HaveAttribute("comment", property.Comment)
                         .And.HaveAttribute("value", property.Value);
                 } else {
-                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == property.Id)
+                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == property.Id)
                         .Should().HaveAttribute("type", property.Type)
                         .And.HaveAttribute("comment", property.Comment)
                         .And.HaveValue(property.Value);
@@ -881,7 +938,7 @@ namespace NINA.Test {
             }
 
             foreach (var card in expectedFITSKeywords) {
-                sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name").Value == card.Key)
+                sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name")?.Value == card.Key)
                 .Should().HaveAttribute("name", card.Key)
                 .And.HaveAttribute("value", card.Value.Trim())
                 .And.HaveAttribute("comment", card.Comment);
@@ -924,12 +981,12 @@ namespace NINA.Test {
 
             foreach (var property in expectedProperties) {
                 if (property.Type != "String") {
-                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == property.Id)
+                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == property.Id)
                         .Should().HaveAttribute("type", property.Type)
                         .And.HaveAttribute("comment", property.Comment)
                         .And.HaveAttribute("value", property.Value);
                 } else {
-                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == property.Id)
+                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == property.Id)
                         .Should().HaveAttribute("type", property.Type)
                         .And.HaveAttribute("comment", property.Comment)
                         .And.HaveValue(property.Value);
@@ -937,7 +994,7 @@ namespace NINA.Test {
             }
 
             foreach (var card in expectedFITSKeywords) {
-                sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name").Value == card.Key)
+                sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name")?.Value == card.Key)
                 .Should().HaveAttribute("name", card.Key)
                 .And.HaveAttribute("value", card.Value.Trim())
                 .And.HaveAttribute("comment", card.Comment);
@@ -971,12 +1028,12 @@ namespace NINA.Test {
 
             foreach (var property in expectedProperties) {
                 if (property.Type != "String") {
-                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == property.Id)
+                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == property.Id)
                         .Should().HaveAttribute("type", property.Type)
                         .And.HaveAttribute("comment", property.Comment)
                         .And.HaveAttribute("value", property.Value);
                 } else {
-                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == property.Id)
+                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == property.Id)
                         .Should().HaveAttribute("type", property.Type)
                         .And.HaveAttribute("comment", property.Comment)
                         .And.HaveValue(property.Value);
@@ -984,7 +1041,7 @@ namespace NINA.Test {
             }
 
             foreach (var card in expectedFITSKeywords) {
-                sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name").Value == card.Key)
+                sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name")?.Value == card.Key)
                 .Should().HaveAttribute("name", card.Key)
                 .And.HaveAttribute("value", card.Value.Trim())
                 .And.HaveAttribute("comment", card.Comment);
@@ -1021,12 +1078,12 @@ namespace NINA.Test {
 
             foreach (var property in expectedProperties) {
                 if (property.Type != "String") {
-                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == property.Id)
+                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == property.Id)
                         .Should().HaveAttribute("type", property.Type)
                         .And.HaveAttribute("comment", property.Comment)
                         .And.HaveAttribute("value", property.Value);
                 } else {
-                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == property.Id)
+                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == property.Id)
                         .Should().HaveAttribute("type", property.Type)
                         .And.HaveAttribute("comment", property.Comment)
                         .And.HaveValue(property.Value);
@@ -1034,7 +1091,7 @@ namespace NINA.Test {
             }
 
             foreach (var card in expectedFITSKeywords) {
-                sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name").Value == card.Key)
+                sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name")?.Value == card.Key)
                 .Should().HaveAttribute("name", card.Key)
                 .And.HaveAttribute("value", card.Value.Trim())
                 .And.HaveAttribute("comment", card.Comment);
@@ -1075,12 +1132,12 @@ namespace NINA.Test {
 
             foreach (var property in expectedProperties) {
                 if (property.Type != "String") {
-                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == property.Id)
+                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == property.Id)
                         .Should().HaveAttribute("type", property.Type)
                         .And.HaveAttribute("comment", property.Comment)
                         .And.HaveAttribute("value", property.Value);
                 } else {
-                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == property.Id)
+                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == property.Id)
                         .Should().HaveAttribute("type", property.Type)
                         .And.HaveAttribute("comment", property.Comment)
                         .And.HaveValue(property.Value);
@@ -1088,7 +1145,7 @@ namespace NINA.Test {
             }
 
             foreach (var card in expectedFITSKeywords) {
-                sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name").Value == card.Key)
+                sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name")?.Value == card.Key)
                 .Should().HaveAttribute("name", card.Key)
                 .And.HaveAttribute("value", card.Value.Trim())
                 .And.HaveAttribute("comment", card.Comment);
@@ -1121,7 +1178,7 @@ namespace NINA.Test {
             //Assert
 
             foreach (var card in expectedFITSKeywords) {
-                sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name").Value == card.Key)
+                sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name")?.Value == card.Key)
                 .Should().HaveAttribute("name", card.Key)
                 .And.HaveAttribute("value", card.Value.Trim())
                 .And.HaveAttribute("comment", card.Comment);
@@ -1176,12 +1233,12 @@ namespace NINA.Test {
 
             foreach (var property in expectedProperties) {
                 if (property.Type != "String") {
-                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == property.Id)
+                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == property.Id)
                         .Should().HaveAttribute("type", property.Type)
                         .And.HaveAttribute("comment", property.Comment)
                         .And.HaveAttribute("value", property.Value);
                 } else {
-                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id").Value == property.Id)
+                    sut.Image.Elements(ns + "Property").First(x => x.Attribute("id")?.Value == property.Id)
                         .Should().HaveAttribute("type", property.Type)
                         .And.HaveAttribute("comment", property.Comment)
                         .And.HaveValue(property.Value);
@@ -1189,7 +1246,7 @@ namespace NINA.Test {
             }
 
             foreach (var card in expectedFITSKeywords) {
-                sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name").Value == card.Key)
+                sut.Image.Elements(ns + "FITSKeyword").First(x => x.Attribute("name")?.Value == card.Key)
                 .Should().HaveAttribute("name", card.Key)
                 .And.HaveAttribute("value", card.Value.Trim())
                 .And.HaveAttribute("comment", card.Comment);

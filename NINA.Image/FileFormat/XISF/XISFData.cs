@@ -1,7 +1,7 @@
 #region "copyright"
 
 /*
-    Copyright © 2016 - 2024 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
+    Copyright © 2016 - 2026 Stefan Berg <isbeorn86+NINA@googlemail.com> and the N.I.N.A. contributors
 
     This file is part of N.I.N.A. - Nighttime Imaging 'N' Astronomy.
 
@@ -173,6 +173,16 @@ namespace NINA.Image.FileFormat.XISF {
                     }
 
                     outArray = ZlibStream.CompressBuffer(byteArray);
+                } else if (CompressionType == XISFCompressionTypeEnum.ZSTD) {
+                    if (ByteShuffling) {
+                        CompressionName = "zstd+sh";
+                        byteArray = Shuffle(byteArray, ShuffleItemSize);
+                    } else {
+                        CompressionName = "zstd";
+                    }
+
+                    using var compressor = new ZstdSharp.Compressor(1);
+                    outArray = compressor.Wrap(byteArray).ToArray();
                 } else {
                     outArray = new byte[byteArray.Length];
                     Array.Copy(byteArray, outArray, outArray.Length);
