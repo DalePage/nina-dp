@@ -786,7 +786,7 @@ namespace NINA.WPF.Base.ViewModel.Equipment.Telescope {
 
                     Logger.Info($"Syncing scope from {position} to {transform}");
                     Logger.Debug($"Initial delta between current position {position} and sync target {transform} is {initialDelta}");
-                    await WaitForSyncCompletion(transform, initialDelta);
+                    await WaitForSyncCompletion(transform, initialDelta, profileService.ActiveProfile.PlateSolveSettings.Threshold);
 
                     return result;
                 } else {
@@ -797,22 +797,20 @@ namespace NINA.WPF.Base.ViewModel.Equipment.Telescope {
             }
         }
 
-        private async Task WaitForSyncCompletion(Coordinates transform, Separation initialError) {
+        private async Task WaitForSyncCompletion(Coordinates transform, Separation initialError, double plateSolveThreshold) {
             DateTime currentTime = DateTime.UtcNow;
             DateTime timeoutEnds = currentTime + TimeSpan.FromSeconds(profileService.ActiveProfile.TelescopeSettings.SettleTime);
-            double plateSolveTolerance = profileService.ActiveProfile.PlateSolveSettings.Threshold;
-            Angle plateSolveToleranceAngle = Angle.ByDegree(plateSolveTolerance);
             await updateTimer.WaitForNextUpdate(default);
             Coordinates position = GetCurrentPosition();
             while (
                     timeoutEnds < currentTime &&
-                    (position - transform).Distance.Degree > plateSolveTolerance
+                    (position - transform).Distance.Degree > plateSolveThreshold
                   ) {
                 Logger.Debug($"Waiting for telescope to update its position after sync command. " +
                     $"Current position: {position}, Target position: {transform}, " +
                     $"Current error: {(position - transform).Distance}, " +
                     $"Initial error: {initialError.Distance}, " +
-                    $"Platesolve tolerance: {plateSolveToleranceAngle}");
+                    $"Platesolve tolerance: {Angle.ByDegree(plateSolveThreshold)}");
                 await updateTimer.WaitForNextUpdate(default);
                 position = GetCurrentPosition();
                 currentTime = DateTime.UtcNow;
