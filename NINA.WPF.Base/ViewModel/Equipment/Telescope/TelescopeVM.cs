@@ -803,7 +803,7 @@ namespace NINA.WPF.Base.ViewModel.Equipment.Telescope {
             await updateTimer.WaitForNextUpdate(default);
             Coordinates position = GetCurrentPosition();
             while (
-                    timeoutEnds < currentTime &&
+                    timeoutEnds > currentTime &&
                     (position - transform).Distance.Degree > plateSolveThreshold
                   ) {
                 Logger.Debug($"Waiting for telescope to update its position after sync command. " +
